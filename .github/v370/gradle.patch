@@ -1,0 +1,19 @@
+--- /mnt/data/v362src/android/app/build.gradle	2026-09-16 21:50:44.000000000 +0000
++++ /mnt/data/v370work/android/app/build.gradle	2026-09-16 22:49:09.827954029 +0000
+@@ -13,8 +13,8 @@
+         applicationId 'com.zarivostudios.prismhop'
+         minSdk 26
+         targetSdk 36
+-        versionCode 38
+-        versionName '3.6.2-test'
++        versionCode 39
++        versionName '3.7.0-test'
+     }
+ 
+     buildTypes {
+@@ -54,4 +54,5 @@
+ 
+ dependencies {
+     implementation 'androidx.core:core:1.17.0'
++    implementation 'com.google.android.play:integrity:1.6.0'
+ }
