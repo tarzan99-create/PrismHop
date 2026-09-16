@@ -1,0 +1,53 @@
+--- index.html.orig
++++ index.html
+@@ -5499,7 +5512,7 @@
+  }
+  const stats={score:Math.floor(snapshot.points),gates:Math.floor(snapshot.gates),perfect_count:Math.floor(snapshot.perfects),best_chain:Math.floor(snapshot.bestChain),shards_collected:Math.floor(snapshot.shards),duration_ms:Math.max(0,Math.floor(snapshot.elapsed*1000))};
+  const events=integrityEvents.map(e=>e.slice());
+- result={epoch,title:'VERIFYING RUN…',copy:'Replaying your run against the server-issued sequence. Your local progress is already saved.',uploaded:false};render();paintResult();
++ result={epoch,title:'SAVING RUN…',copy:'Checking your run and updating the race. Your personal progress is already safe.',uploaded:false};render();paintResult();
+  try{
+   const event_hash=await hashEvents(events);
+   const receipt=await server({action:'finish',session_id:current.session_id,server_nonce:current.server_nonce,checkpoint_token:current.checkpoint_token,stats,integrity:{version:1,event_hash,events}});
+@@ -6580,6 +6593,41 @@
+ @keyframes v34-prism-breathe{0%,100%{transform:scale(.91);opacity:calc(var(--world-pulse-opacity)*.72)}50%{transform:scale(1.05);opacity:var(--world-pulse-opacity)}}
+ @media(prefers-reduced-motion:reduce){.game::after{animation:none;transform:scale(1);opacity:calc(var(--world-pulse-opacity)*.82)}}
+ </style>
++
++<style id="v361-play-polish">
++/* V3.6.1 — Play-build polish: one Prism world, native-feeling Home scroll and a DOM hero prism. */
++.game{--world-pulse-opacity:.50;background:linear-gradient(180deg,#0f0c20 0%,#0b0b18 42%,#090916 100%)}
++.topbar{background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
++.game[data-page="home"] .home{background:transparent!important}
++.game[data-page="playing"] .hud::before{display:none!important}
++.game::after{filter:blur(14px);opacity:var(--world-pulse-opacity)}
++.game.home-scrolling::after{filter:none!important;opacity:.30!important}
++.game.home-scrolling .home-prism-orbit{filter:none!important}
++.game.home-scrolling .home-prism-core,.game.home-scrolling .home-prism-dot{box-shadow:none!important}
++.game.home-scrolling .home-prism-ring,.game.home-scrolling .home-prism-inner,.game.home-scrolling .home-prism-core,.game.home-scrolling .home-prism-dot{animation-play-state:paused!important}
++.game[data-page="playing"] .run-local-note{display:none!important}
++.game[data-page="playing"] .race-hud small{display:none!important}
++#connection-chip{display:none!important}
++.game.startup-active #home{visibility:hidden}
++.game.startup-active.startup-reveal #home{visibility:visible}
++.home-prism-orbit{position:absolute;left:50%;top:46%;width:76px;height:76px;transform:translate(-50%,-50%);pointer-events:none;contain:layout paint style;will-change:transform;filter:drop-shadow(0 0 13px rgba(164,138,255,.20));transition:opacity .55s ease}
++.home-prism-ring,.home-prism-inner,.home-prism-core,.home-prism-dot{position:absolute;display:block;pointer-events:none}
++.home-prism-ring{inset:2px;border-radius:50%;background:conic-gradient(from -12deg,#45ead5 0 22%,#0b0b18 22% 25%,#ff669e 25% 47%,#0b0b18 47% 50%,#f8d46b 50% 72%,#0b0b18 72% 75%,#a48aff 75% 97%,#0b0b18 97% 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 8px));mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 8px));animation:v361-home-spin 10.5s linear infinite}
++.home-prism-inner{inset:15px;border:2px solid rgba(197,181,255,.28);border-radius:50%;box-shadow:inset 0 0 12px rgba(69,234,213,.08);animation:v361-home-spin-rev 8.2s linear infinite}
++.home-prism-core{left:50%;top:50%;width:21px;height:21px;margin:-10.5px 0 0 -10.5px;transform:rotate(45deg);border-radius:5px;background:linear-gradient(135deg,#a48aff,#45ead5 56%,#ff669e);box-shadow:0 0 16px rgba(164,138,255,.46);animation:v361-core 2.2s ease-in-out infinite}
++.home-prism-core::after{content:"";position:absolute;inset:7px;border-radius:2px;background:rgba(255,255,255,.78)}
++.home-prism-dot{width:5px;height:5px;border-radius:50%;left:50%;top:50%;margin:-2.5px;background:currentColor;box-shadow:0 0 8px currentColor}
++.home-prism-dot.d1{color:#45ead5;animation:v361-dot1 7.4s linear infinite}.home-prism-dot.d2{color:#ff669e;animation:v361-dot2 8.1s linear infinite}.home-prism-dot.d3{color:#f8d46b;animation:v361-dot3 7.8s linear infinite}.home-prism-dot.d4{color:#a48aff;animation:v361-dot4 8.6s linear infinite}
++@keyframes v361-home-spin{to{transform:rotate(360deg)}}@keyframes v361-home-spin-rev{to{transform:rotate(-360deg)}}@keyframes v361-core{0%,100%{scale:.94;opacity:.86}50%{scale:1.07;opacity:1}}
++@keyframes v361-dot1{from{transform:rotate(18deg) translateX(49px)}to{transform:rotate(378deg) translateX(49px)}}@keyframes v361-dot2{from{transform:rotate(108deg) translateX(47px)}to{transform:rotate(468deg) translateX(47px)}}@keyframes v361-dot3{from{transform:rotate(198deg) translateX(49px)}to{transform:rotate(558deg) translateX(49px)}}@keyframes v361-dot4{from{transform:rotate(288deg) translateX(47px)}to{transform:rotate(648deg) translateX(47px)}}
++.game.startup-active .home-prism-orbit{opacity:0}.game.startup-active.startup-reveal .home-prism-orbit{opacity:1;transition-delay:.12s}
++.connection-notice{left:50%;right:auto;max-width:260px;transform:translateX(-50%);padding:8px 11px;text-align:center;font-size:9px;background:#10121dd9;border-color:#a48aff22}
++#result.results-enter:not(.numbers-settled) .result-score{animation:v361-score-arrive 1.08s cubic-bezier(.16,.8,.2,1) both!important}
++@keyframes v361-score-arrive{0%{opacity:.15;transform:translateY(10px) scale(.84);filter:blur(3px)}52%{opacity:1;transform:translateY(-2px) scale(1.06);filter:blur(0) drop-shadow(0 0 24px #80eee55c)}100%{opacity:1;transform:none;filter:drop-shadow(0 3px 1px #5a469680) drop-shadow(0 0 17px #aa82ff2a)}}
++@media(max-height:760px){.home-prism-orbit{width:68px;height:68px}.home-prism-dot{display:none}}
++@media(max-height:680px){.home-prism-orbit{width:56px;height:56px}.home-prism-ring{inset:1px}.home-prism-inner{inset:12px}.home-prism-core{width:17px;height:17px;margin:-8.5px 0 0 -8.5px}}
++@media(prefers-reduced-motion:reduce){.home-prism-ring,.home-prism-inner,.home-prism-core,.home-prism-dot{animation:none!important}}
++</style>
+ <script id="v3311-connected-launch">
+ (()=>{
+   const splash=document.getElementById('startup-splash');
