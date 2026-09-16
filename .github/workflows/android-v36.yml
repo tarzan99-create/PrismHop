@@ -1,4 +1,4 @@
-name: Prism Hop Android V3.6
+name: Prism Hop Android V3.6.1
 
 on:
   workflow_dispatch:
@@ -22,6 +22,22 @@ jobs:
           unzip -q Prism-Hop-V3.6-Android-Source.zip -d build-src
           cp -R build-src/Prism-Hop-V3.6-Android/android ./android
           printf '\nandroid.useAndroidX=true\n' >> android/gradle.properties
+      - name: Inspect V3.6.1 patch targets
+        run: |
+          echo '===== SOURCE FILES ====='
+          find android -type f | sort
+          echo '===== TARGET STRING MATCHES ====='
+          grep -RniE "connection interrupted|personal best saved|offline demo|server-issued|there.?s more hop|find your flow|splash|WebView|prism-runs|wmicrzmalyekinqvcuxt|supabase|network|offline|online|hero|ring|pulse" android/app/src android 2>/dev/null | head -n 1200 || true
+          echo '===== MANIFEST ====='
+          cat android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          echo '===== MAIN ACTIVITY CANDIDATES ====='
+          find android/app/src/main -type f \( -name '*MainActivity*' -o -name '*Activity.java' -o -name '*Activity.kt' \) -print -exec sh -c 'echo "--- $1"; sed -n "1,320p" "$1"' _ {} \;
+          echo '===== WEB ASSET CANDIDATES ====='
+          find android/app/src/main -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' \) -print
+          for f in $(find android/app/src/main -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' \)); do
+            echo "--- $f"
+            grep -niE "connection interrupted|personal best saved|offline demo|server-issued|there.?s more hop|find your flow|splash|prism-runs|wmicrzmalyekinqvcuxt|supabase|hero|ring|pulse" "$f" | head -n 300 || true
+          done
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -54,18 +70,18 @@ jobs:
             android/app/build/outputs/bundle/release/app-release.aab \
             "$KEY_ALIAS"
           jarsigner -verify -verbose -certs android/app/build/outputs/bundle/release/app-release.aab
-          cp android/app/build/outputs/bundle/release/app-release.aab Prism-Hop-V3.6-Play-Signed.aab
+          cp android/app/build/outputs/bundle/release/app-release.aab Prism-Hop-V3.6.1-Play-Signed.aab
       - name: Inspect outputs
         run: |
           test -f android/app/build/outputs/apk/debug/app-debug.apk
-          test -s Prism-Hop-V3.6-Play-Signed.aab
-          sha256sum android/app/build/outputs/apk/debug/app-debug.apk Prism-Hop-V3.6-Play-Signed.aab | tee Prism-Hop-V3.6-SHA256.txt
+          test -s Prism-Hop-V3.6.1-Play-Signed.aab
+          sha256sum android/app/build/outputs/apk/debug/app-debug.apk Prism-Hop-V3.6.1-Play-Signed.aab | tee Prism-Hop-V3.6.1-SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: Prism-Hop-V3.6-Play-Signed
+          name: Prism-Hop-V3.6.1-Play-Signed
           path: |
-            Prism-Hop-V3.6-Play-Signed.aab
+            Prism-Hop-V3.6.1-Play-Signed.aab
             android/app/build/outputs/apk/debug/app-debug.apk
-            Prism-Hop-V3.6-SHA256.txt
+            Prism-Hop-V3.6.1-SHA256.txt
           if-no-files-found: error
           retention-days: 14
