@@ -1,0 +1,137 @@
+--- /mnt/data/v362src/android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java	2026-09-16 21:50:44.000000000 +0000
++++ /mnt/data/v370work/android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java	2026-09-16 22:48:53.672534008 +0000
+@@ -37,6 +37,13 @@
+ import android.widget.Toast;
+ 
+ import org.json.JSONArray;
++import org.json.JSONObject;
++
++import com.google.android.play.core.integrity.IntegrityManagerFactory;
++import com.google.android.play.core.integrity.StandardIntegrityManager;
++import com.google.android.play.core.integrity.StandardIntegrityManager.PrepareIntegrityTokenRequest;
++import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenProvider;
++import com.google.android.play.core.integrity.StandardIntegrityManager.StandardIntegrityTokenRequest;
+ 
+ import java.io.OutputStream;
+ import java.nio.charset.StandardCharsets;
+@@ -49,7 +56,8 @@
+     private static final int FILE_CHOOSER_REQUEST = 4101;
+     private static final int SAVE_BACKUP_REQUEST = 4102;
+     private static final int NOTIFICATION_PERMISSION_REQUEST = 4103;
+-    private static final String APP_VERSION = "3.6.2-test";
++    private static final String APP_VERSION = "3.7.0-test";
++    private static final long PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER = 437567902207L;
+     private static final String CHANNEL_ID = "prism_updates";
+ 
+     private WebView webView;
+@@ -58,6 +66,11 @@
+     private String pendingSaveText;
+     private ConnectivityManager connectivityManager;
+     private ConnectivityManager.NetworkCallback networkCallback;
++    private StandardIntegrityManager integrityManager;
++    private StandardIntegrityTokenProvider integrityTokenProvider;
++    private boolean integrityPreparing;
++    private String pendingIntegrityRequestId;
++    private String pendingIntegrityRequestHash;
+ 
+     @Override protected void onCreate(Bundle state) {
+         super.onCreate(state);
+@@ -65,6 +78,8 @@
+         getWindow().setNavigationBarColor(Color.rgb(7,9,18));
+         immersive();
+         createNotificationChannel();
++        integrityManager = IntegrityManagerFactory.createStandard(getApplicationContext());
++        prepareIntegrityProvider();
+ 
+         FrameLayout root = new FrameLayout(this);
+         webView = new WebView(this);
+@@ -284,6 +299,79 @@
+     }
+ 
+ 
++    private void prepareIntegrityProvider() {
++        if (integrityManager == null || integrityPreparing || integrityTokenProvider != null) return;
++        integrityPreparing = true;
++        integrityManager.prepareIntegrityToken(
++                PrepareIntegrityTokenRequest.builder()
++                        .setCloudProjectNumber(PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER)
++                        .build())
++                .addOnSuccessListener(provider -> {
++                    integrityPreparing = false;
++                    integrityTokenProvider = provider;
++                    if (pendingIntegrityRequestId != null && pendingIntegrityRequestHash != null) {
++                        String requestId = pendingIntegrityRequestId;
++                        String requestHash = pendingIntegrityRequestHash;
++                        pendingIntegrityRequestId = null;
++                        pendingIntegrityRequestHash = null;
++                        requestIntegrityTokenNow(requestHash, requestId);
++                    }
++                })
++                .addOnFailureListener(error -> {
++                    integrityPreparing = false;
++                    integrityTokenProvider = null;
++                    if (pendingIntegrityRequestId != null) {
++                        String requestId = pendingIntegrityRequestId;
++                        pendingIntegrityRequestId = null;
++                        pendingIntegrityRequestHash = null;
++                        sendIntegrityResult(requestId, null, "PROVIDER_PREPARE_FAILED");
++                    }
++                });
++    }
++
++    private void requestIntegrityToken(String requestHash, String requestId) {
++        if (requestId == null || requestId.length() < 8 || requestId.length() > 100 ||
++                requestHash == null || requestHash.length() < 16 || requestHash.length() > 500) {
++            sendIntegrityResult(requestId == null ? "invalid" : requestId, null, "INVALID_REQUEST");
++            return;
++        }
++        runOnUiThread(() -> {
++            if (integrityTokenProvider == null) {
++                pendingIntegrityRequestId = requestId;
++                pendingIntegrityRequestHash = requestHash;
++                prepareIntegrityProvider();
++                return;
++            }
++            requestIntegrityTokenNow(requestHash, requestId);
++        });
++    }
++
++    private void requestIntegrityTokenNow(String requestHash, String requestId) {
++        StandardIntegrityTokenProvider provider = integrityTokenProvider;
++        if (provider == null) {
++            sendIntegrityResult(requestId, null, "PROVIDER_UNAVAILABLE");
++            return;
++        }
++        provider.request(StandardIntegrityTokenRequest.builder().setRequestHash(requestHash).build())
++                .addOnSuccessListener(response -> sendIntegrityResult(requestId, response.token(), null))
++                .addOnFailureListener(error -> {
++                    integrityTokenProvider = null;
++                    prepareIntegrityProvider();
++                    sendIntegrityResult(requestId, null, "TOKEN_REQUEST_FAILED");
++                });
++    }
++
++    private void sendIntegrityResult(String requestId, String token, String error) {
++        runOnUiThread(() -> {
++            if (webView == null) return;
++            String js = "window.PrismNativeHost&&window.PrismNativeHost.integrityToken&&window.PrismNativeHost.integrityToken(" +
++                    JSONObject.quote(requestId == null ? "" : requestId) + "," +
++                    (token == null ? "null" : JSONObject.quote(token)) + "," +
++                    (error == null ? "null" : JSONObject.quote(error)) + ");";
++            webView.evaluateJavascript(js, null);
++        });
++    }
++
+     private void scheduleRaceReminder(boolean enabled) {
+         AlarmManager alarms=(AlarmManager)getSystemService(ALARM_SERVICE);
+         Intent intent=new Intent(this, RaceReminderReceiver.class).setAction("com.zarivostudios.prismhop.RACE_REMINDER");
+@@ -308,7 +396,8 @@
+     private final class PrismNativeBridge {
+         @JavascriptInterface public String platform() { return "android"; }
+         @JavascriptInterface public String appVersion() { return APP_VERSION; }
+-        @JavascriptInterface public String integrityStatus() { return "foundation_only_play_console_binding_required"; }
++        @JavascriptInterface public String integrityStatus() { return integrityTokenProvider != null ? "standard_ready" : integrityPreparing ? "standard_preparing" : "standard_unavailable"; }
++        @JavascriptInterface public void requestIntegrityToken(String requestHash, String requestId) { MainActivity.this.requestIntegrityToken(requestHash, requestId); }
+         @JavascriptInterface public void haptic(String kind) { runOnUiThread(() -> hapticEvent(kind)); }
+         @JavascriptInterface public void setRaceReminder(boolean enabled) { runOnUiThread(() -> scheduleRaceReminder(enabled)); }
+         @JavascriptInterface public boolean isOnline() { return MainActivity.this.isOnline(); }
