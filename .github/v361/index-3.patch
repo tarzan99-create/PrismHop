@@ -1,0 +1,48 @@
+--- index.html.orig
++++ index.html
+@@ -5380,7 +5393,7 @@
+ const TOKEN_KEY='prism-hop-v3:auth';
+ const $=id=>document.getElementById(id);
+ let auth=null,refreshing=null,authEpoch=0,runEpoch=0,preparing=false,active=null;
+-let pulseTimer=null,pulseBusy=false,result=null,dialogReturn=null,dialogResume=false,authBusy=false;
++let pulseTimer=null,pulseBusy=false,pulseFailures=0,result=null,dialogReturn=null,dialogResume=false,authBusy=false;
+ let profileUI=null;
+ let integrityEvents=[];
+ const hashEvents=async events=>{if(!globalThis.crypto?.subtle)throw Object.assign(new Error('Secure event hashing is unavailable in this browser.'),{code:'SERVICE_UNAVAILABLE'});const bytes=new TextEncoder().encode(JSON.stringify(events));const digest=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');};
+@@ -5454,7 +5467,7 @@
+  if(authBusy)return;const token=auth?.access_token;abandon('Signed out');clearAuth();render();status('Signed out. Your local progress is unchanged.');
+  if(token)request('/auth/v1/logout?scope=local',{token}).catch(()=>{});
+ }
+-function stopPulse(){if(pulseTimer!==null)clearInterval(pulseTimer);pulseTimer=null;pulseBusy=false;}
++function stopPulse(){if(pulseTimer!==null)clearInterval(pulseTimer);pulseTimer=null;pulseBusy=false;pulseFailures=0;}
+ function abandon(reason='Personal run'){
+  const previous=active;active=null;preparing=false;runEpoch++;stopPulse();$('v3-preparing').hidden=true;
+  if(previous&&signed()&&navigator.onLine)server({action:'abandon',session_id:previous.session_id,server_nonce:previous.server_nonce}).catch(()=>{});
+@@ -5464,14 +5477,14 @@
+ function loseConnection(reason){
+  if(!active&&!preparing)return;
+  abandon(reason);result={epoch:runEpoch,title:'PERSONAL RUN',copy:reason+' Your XP and personal record stay on this device.',uploaded:false};
+- game()?.notice('Personal run — connection interrupted. Keep playing.');paintResult();
++ game()?.notice('Offline mode — keep playing.');paintResult();
+ }
+ function wantsRace(info){return signed()&&navigator.onLine!==false&&!info.personalOnly&&info.mode==='classic'&&!!globalThis.crypto?.subtle;}
+ async function launch(info,startCallback){
+  if(preparing)return;
+  abandon('New run');const epoch=runEpoch;result=null;acceptedUntil=0;preparing=true;render();$('v3-preparing').hidden=false;
+  try{
+-  const data=await server({action:'start',mode:info.mode,app_version:(window.PrismNative?'3.6.0-android':'3.4.0-web')});
++  const data=await server({action:'start',mode:info.mode,app_version:(window.PrismNative?'3.6.1-android':'3.4.0-web')});
+   if(epoch!==runEpoch)return;
+   if(!data?.session_id||!data.server_nonce||data.mode!=='classic'||data.integrity_version!==1||!data.run_seed||!data.checkpoint_token)throw new Error('The server did not issue a verified run session.');
+   if(navigator.onLine===false||document.hidden){preparing=false;$('v3-preparing').hidden=true;return;}
+@@ -5480,8 +5493,8 @@
+   pulseTimer=setInterval(async()=>{
+    if(pulseBusy||!active||active.epoch!==epoch)return;
+    const current=active;pulseBusy=true;
+-   try{const events=integrityEvents.map(e=>e.slice()),snap=game()?.snapshot()||{},event_hash=await hashEvents(events);const checkpoint={event_count:events.length,event_hash,last_event_ms:events.length?events.at(-1)[1]:0,stats:{score:Math.floor(snap.points||0),gates:Math.floor(snap.gates||0),perfect_count:Math.floor(snap.perfects||0),best_chain:Math.floor(snap.bestChain||0),fragments:Math.floor(snap.fragments||0)}};const r=await server({action:'pulse',session_id:current.session_id,server_nonce:current.server_nonce,checkpoint_token:current.checkpoint_token,checkpoint});if(active===current&&r?.checkpoint_token)current.checkpoint_token=r.checkpoint_token;if(active===current&&!r?.active)loseConnection('The online session closed.');}
+-   catch{if(active===current)loseConnection('The server connection was lost.');}finally{pulseBusy=false;}
++   try{const events=integrityEvents.map(e=>e.slice()),snap=game()?.snapshot()||{},event_hash=await hashEvents(events);const checkpoint={event_count:events.length,event_hash,last_event_ms:events.length?events.at(-1)[1]:0,stats:{score:Math.floor(snap.points||0),gates:Math.floor(snap.gates||0),perfect_count:Math.floor(snap.perfects||0),best_chain:Math.floor(snap.bestChain||0),fragments:Math.floor(snap.fragments||0)}};const r=await server({action:'pulse',session_id:current.session_id,server_nonce:current.server_nonce,checkpoint_token:current.checkpoint_token,checkpoint});if(active===current&&r?.checkpoint_token)current.checkpoint_token=r.checkpoint_token;if(active===current&&r?.active)pulseFailures=0;if(active===current&&!r?.active)loseConnection('Online sync ended.');}
++   catch{if(active===current){pulseFailures++;if(pulseFailures>=2)loseConnection('Offline mode.');}}finally{pulseBusy=false;}
+   },8000);
+   render();
+  }catch(e){
