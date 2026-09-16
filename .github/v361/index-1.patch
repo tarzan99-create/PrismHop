@@ -1,0 +1,54 @@
+--- index.html.orig
++++ index.html
+@@ -4,8 +4,8 @@
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta name="theme-color" content="#0b0b18">
+-<meta name="description" content="Prism Hop V3.4 — Competitive Integrity: longer, easier Flow, continuous home music, a connected Prism atmosphere and animated startup identity.">
+-<title>Prism Hop V3.4 — Competitive Integrity</title>
++<meta name="description" content="Prism Hop V3.6.1 — seamless launch, verified Android race sessions, fluid Home scrolling and one continuous Prism world.">
++<title>Prism Hop V3.6.1 — Native Polish</title>
+ <style>
+ :root{color-scheme:dark;--bg:#080811;--ink:#f4f1ff;--muted:#918da8;--line:rgba(255,255,255,.09);--aqua:#45ead5;--pink:#ff669e;--yellow:#f8d46b;--purple:#a48aff;--accent:#bda5ff}
+ *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overscroll-behavior:none}body{background:var(--bg);color:var(--ink);font-family:var(--prism-ui-font,"Segoe UI",system-ui,sans-serif);overflow:hidden;user-select:none;-webkit-user-select:none}button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}button:focus-visible{outline:2px solid var(--aqua);outline-offset:5px}button:disabled{cursor:default}button,svg{flex-shrink:0}[hidden]{display:none!important}
+@@ -1345,12 +1345,12 @@
+   <div class="studio-note"><span class="equalizer" aria-hidden="true"><i></i><i></i><i></i><i></i></span>PRISM ORIGINALS · COMPOSED FOR YOUR TAPS</div>
+   <footer><kbd>SPACE</kbd> or click to hop &nbsp;·&nbsp; <kbd>P</kbd> to pause<br>V3.2.0.1 · ORIGINAL THEME LAB / ONLINE BETA</footer>
+ </aside>
+-<main class="game" id="game" aria-label="Prism Hop game">
++<main class="game startup-active" id="game" aria-label="Prism Hop game">
+   <div id="startup-splash" class="startup-splash" aria-label="Prism Hop startup">
+     <div class="splash-prism" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+     <div class="splash-title"><strong>PRISM</strong><strong>HOP</strong></div>
+     <div class="splash-ring" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+-    <p>THERE'S MORE HOP</p>
++    <p>FIND YOUR FLOW.</p>
+     <small id="splash-audio-note">PRISM ORIGINALS</small>
+   </div>
+   <div id="flow-edge-fx" aria-hidden="true"></div>
+@@ -1372,7 +1372,13 @@
+   <section class="screen home" id="home" aria-label="Home">
+     <p class="eyebrow">ONE TAP. FIND YOUR FLOW.</p>
+     <h1>PRISM<span>HOP.</span></h1>
+-    <div class="hero-space" id="hero-space"><div class="orbit-note">A LITTLE TIMING. A LOT OF FEELING.</div></div>
++    <div class="hero-space" id="hero-space">
++      <div class="home-prism-orbit" aria-hidden="true">
++        <span class="home-prism-ring"></span><span class="home-prism-inner"></span><span class="home-prism-core"></span>
++        <i class="home-prism-dot d1"></i><i class="home-prism-dot d2"></i><i class="home-prism-dot d3"></i><i class="home-prism-dot d4"></i>
++      </div>
++      <div class="orbit-note">A LITTLE TIMING. A LOT OF FEELING.</div>
++    </div>
+     <div class="home-records">
+       <div><small>PERSONAL BEST</small><strong id="home-best">0</strong><span id="home-best-mode">CHILL</span></div>
+       <div><small>YOUR JOURNEY</small><strong>Level <b id="home-level">1</b></strong><span id="home-progress">100 XP to level 2</span></div>
+@@ -1404,8 +1410,8 @@
+   <div class="zone-progress" id="zone-progress" hidden><span id="zone-next">10 TO RHYTHM</span><i><b id="zone-fill"></b></i></div>
+   <div class="zone-banner" id="zone-banner" hidden aria-live="polite"><small id="zone-number">ZONE 02</small><strong id="zone-name">RHYTHM</strong><span id="zone-subtitle">The world wakes up.</span></div>
+   <div class="toast" id="toast" role="status"><strong id="toast-main"></strong><span id="toast-detail"></span></div>
+-  <div class="race-hud" id="race-hud" hidden><small>OFFLINE DEMO</small><b id="race-hud-text">PLAY FOR THE TOP 3</b></div>
+-  <div class="rank-event" id="rank-event" hidden role="status"><small>DEMO STANDINGS</small><strong id="rank-event-title">TOP 3</strong><span id="rank-event-detail">PROVISIONAL</span></div>
++  <div class="race-hud" id="race-hud" hidden><small>RACE</small><b id="race-hud-text">PLAY FOR THE TOP 3</b></div>
++  <div class="rank-event" id="rank-event" hidden role="status"><small>RACE UPDATE</small><strong id="rank-event-title">TOP 3</strong><span id="rank-event-detail">PROVISIONAL</span></div>
+   <div class="run-pocket" id="run-pocket" hidden>
+     <div class="shard-pocket"><span aria-hidden="true">✦</span><b id="run-shards">0</b><small id="run-xp">+0 XP</small></div>
+     <div class="shield-pocket" id="shield-pocket" role="status"><span aria-hidden="true">◇</span><b id="shield-label">SHIELD 0/5</b></div>
