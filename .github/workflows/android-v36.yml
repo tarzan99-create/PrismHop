@@ -21,6 +21,7 @@ jobs:
         run: |
           unzip -q Prism-Hop-V3.6-Android-Source.zip -d build-src
           cp -R build-src/Prism-Hop-V3.6-Android/android ./android
+          printf '\nandroid.useAndroidX=true\n' >> android/gradle.properties
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
