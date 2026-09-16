@@ -1,0 +1,62 @@
+--- index.html.orig
++++ index.html
+@@ -1935,16 +1941,16 @@
+     const b=art.getContext('2d');
+     const pairs=[['#35214d','#123338'],['#352b69','#0f5a51'],['#663141','#5d353f'],['#304558','#513357']];
+     const gradient=b.createLinearGradient(0,0,W,0);
+-    gradient.addColorStop(0,pairs[index][0]+'aa');gradient.addColorStop(.32,pairs[index][0]+'09');
+-    gradient.addColorStop(.68,pairs[index][1]+'09');gradient.addColorStop(1,pairs[index][1]+'aa');
+-    b.fillStyle=gradient;b.fillRect(0,190,W,H);
++    gradient.addColorStop(0,pairs[index][0]+'88');gradient.addColorStop(.32,pairs[index][0]+'0b');
++    gradient.addColorStop(.68,pairs[index][1]+'0b');gradient.addColorStop(1,pairs[index][1]+'88');
++    b.fillStyle=gradient;b.fillRect(0,0,W,H);
+     const palette=index===0?['#7a67a5','#549997']:index===1?['#b198ff','#69efd3']:index===2?['#ff96b6','#ffba90']:C;
+     for(let side=0;side<2;side++){
+       b.save();if(side){b.translate(W,0);b.scale(-1,1);}
+       if(index===0){
+         // Quiet observatory: small outlined fragments and sparse constellations.
+         for(let k=0;k<6;k++){
+-          const y=215+k*123,x=13+(k%3)*17;
++          const y=72+k*123,x=13+(k%3)*17;
+           b.beginPath();b.moveTo(x,y-36);b.lineTo(x+17,y+6);b.lineTo(x+3,y+51);b.lineTo(x-9,y+10);b.closePath();
+           b.fillStyle='#a48aff05';b.fill();b.strokeStyle='#ab93cd24';b.lineWidth=.7;b.stroke();
+           b.beginPath();b.moveTo(x+27,y-14);b.lineTo(x+43,y+16);b.lineTo(x+35,y+51);
+@@ -3502,6 +3508,7 @@
+   backdrop=document.createElement('canvas');backdrop.width=canvas.width;backdrop.height=canvas.height;
+   const b=backdrop.getContext('2d');b.scale(canvas.width/W,canvas.height/H);
+   b.fillStyle='#0b0b18';b.fillRect(0,0,W,H);
++  let wash=b.createLinearGradient(0,0,0,H);wash.addColorStop(0,'rgba(31,20,55,.58)');wash.addColorStop(.20,'rgba(23,19,47,.34)');wash.addColorStop(.56,'rgba(11,11,24,0)');wash.addColorStop(1,'rgba(11,11,24,.12)');b.fillStyle=wash;b.fillRect(0,0,W,H);
+   let grad=b.createRadialGradient(W*.48,H*.4,4,W*.48,H*.4,W*.75);grad.addColorStop(0,'#201633');grad.addColorStop(1,'#0b0b18');b.fillStyle=grad;b.fillRect(0,0,W,H);
+   grad=b.createRadialGradient(W*.75,H*.8,0,W*.75,H*.8,W*.8);grad.addColorStop(0,'#0e222526');grad.addColorStop(1,'#0b0b1800');b.fillStyle=grad;b.fillRect(0,0,W,H);
+   celebrationCanvas.width=canvas.width;celebrationCanvas.height=canvas.height;
+@@ -3917,6 +3924,7 @@
+   ctx.strokeStyle='#bfb2e7';ctx.globalAlpha=alpha*.09;ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,r+thick/2+8,0,TAU);ctx.stroke();ctx.restore();
+ }
+ function drawHome() {
++  if(document.querySelector('.home-prism-orbit'))return;
+   const {x,y,r}=hero;if(r<=0)return;
+   ringArt(x,y,r,decorT*.35,Math.max(8,r*.15),1,true);
+   ringArt(x,y,r*.67,-decorT*.45+1.2,2,.28,false);
+@@ -4925,7 +4933,12 @@
+   $('help-close').addEventListener('click',closeHelp);
+   $('help-done').addEventListener('click',closeHelp);
+   $('music-inline').addEventListener('click',()=>{$('music').click();syncAudioLabels();});
+-  $('home').addEventListener('scroll',()=>requestAnimationFrame(measureHero),{passive:true});
++  let homeScrollTimer=null;
++  $('home').addEventListener('scroll',()=>{
++    game.classList.add('home-scrolling');
++    clearTimeout(homeScrollTimer);
++    homeScrollTimer=setTimeout(()=>game.classList.remove('home-scrolling'),120);
++  },{passive:true});
+   // A mixer is a dialog, so keyboard focus must never fall through to gameplay.
+   $('mixer').addEventListener('keydown',e=>trapDialog(e,$('mixer')));
+   if(window.__PRISM_TEST__)window.uiTest={navigateTo,refreshShell,openHelp,closeHelp};
+@@ -5201,7 +5214,7 @@
+ 
+ <div id="v3-preparing" class="online303-modal" hidden>
+  <section class="v3-card" role="dialog" aria-modal="true" aria-labelledby="prepare-title">
+-  <p class="eyebrow">CLASSIC · VERIFIED V1</p><h2 id="prepare-title">Finding your race.</h2><p>Getting a server-issued session before the first hop. The game has not started yet.</p>
++  <p class="eyebrow">CLASSIC · VERIFIED V1</p><h2 id="prepare-title">Finding your race.</h2><p>Syncing your run before the first hop. The game has not started yet.</p>
+   <div class="v3-row"><button id="v3-play-personal" type="button">Play personally</button><button id="v3-cancel-start" type="button" class="secondary">Cancel</button></div>
+  </section>
+ </div>
