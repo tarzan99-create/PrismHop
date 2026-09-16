@@ -6,7 +6,7 @@ on:
     branches: [ main ]
     paths:
       - 'Prism-Hop-V3.6-Android-Source.zip'
-      - 'tools/patch-v361.py'
+      - '.github/v361/**'
       - '.github/workflows/android-v36.yml'
 
 permissions:
@@ -18,12 +18,35 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - name: Expand and patch Prism Hop V3.6.1
+      - name: Expand Prism Hop V3.6 baseline
         run: |
           unzip -q Prism-Hop-V3.6-Android-Source.zip -d build-src
           cp -R build-src/Prism-Hop-V3.6-Android/android ./android
           printf '\nandroid.useAndroidX=true\n' >> android/gradle.properties
-          python3 tools/patch-v361.py
+      - name: Apply V3.6.1 native and UI polish
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,gzip
+          p=Path('android/app/src/main/assets/index.html.gz.b64')
+          p.with_name('index.html').write_bytes(gzip.decompress(base64.b64decode(p.read_text().strip())))
+          PY
+          for p in .github/v361/index-1.patch .github/v361/index-2.patch .github/v361/index-3.patch .github/v361/index-4.patch; do
+            patch --batch android/app/src/main/assets/index.html < "$p"
+          done
+          patch --batch android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java < .github/v361/mainactivity.patch
+          patch --batch android/app/build.gradle < .github/v361/gradle.patch
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,gzip
+          html=Path('android/app/src/main/assets/index.html').read_bytes()
+          Path('android/app/src/main/assets/index.html.gz.b64').write_text(base64.b64encode(gzip.compress(html,compresslevel=9)).decode())
+          PY
+          grep -q 'versionCode 37' android/app/build.gradle
+          grep -q '3.6.1-android' android/app/src/main/assets/index.html
+          grep -q 'home-prism-orbit' android/app/src/main/assets/index.html
+          grep -q 'FrameLayout root' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          zip -qr Prism-Hop-V3.6.1-Android-Source.zip android -x 'android/.gradle/*' 'android/app/build/*'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -57,13 +80,15 @@ jobs:
         run: |
           test -f android/app/build/outputs/apk/debug/app-debug.apk
           test -s Prism-Hop-V3.6.1-Play-Signed.aab
-          sha256sum android/app/build/outputs/apk/debug/app-debug.apk Prism-Hop-V3.6.1-Play-Signed.aab | tee Prism-Hop-V3.6.1-SHA256.txt
+          test -s Prism-Hop-V3.6.1-Android-Source.zip
+          sha256sum android/app/build/outputs/apk/debug/app-debug.apk Prism-Hop-V3.6.1-Play-Signed.aab Prism-Hop-V3.6.1-Android-Source.zip | tee Prism-Hop-V3.6.1-SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Prism-Hop-V3.6.1-Play-Signed
           path: |
             Prism-Hop-V3.6.1-Play-Signed.aab
             android/app/build/outputs/apk/debug/app-debug.apk
+            Prism-Hop-V3.6.1-Android-Source.zip
             Prism-Hop-V3.6.1-SHA256.txt
           if-no-files-found: error
           retention-days: 14
