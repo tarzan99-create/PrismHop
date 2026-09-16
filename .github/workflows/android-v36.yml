@@ -22,45 +22,35 @@ jobs:
           unzip -q Prism-Hop-V3.6-Android-Source.zip -d build-src
           cp -R build-src/Prism-Hop-V3.6-Android/android ./android
           printf '\nandroid.useAndroidX=true\n' >> android/gradle.properties
-      - name: Concise V3.6.1 diagnostics
+      - name: Decode web asset and inspect V3.6.1 targets
         run: |
-          echo '===== FILES ====='
-          find android/app/src/main -type f | sort | head -n 120
-          echo '===== APP BUILD ====='
-          sed -n '1,240p' android/app/build.gradle 2>/dev/null || sed -n '1,240p' android/app/build.gradle.kts 2>/dev/null || true
-          echo '===== MANIFEST ====='
-          sed -n '1,260p' android/app/src/main/AndroidManifest.xml 2>/dev/null || true
-          echo '===== ACTIVITIES ====='
-          while IFS= read -r f; do
-            echo "--- $f"
-            sed -n '1,360p' "$f"
-          done < <(find android/app/src/main -type f \( -name '*Activity.java' -o -name '*Activity.kt' -o -name '*MainActivity*' \) | sort)
-          echo '===== TARGET MATCHES WITH CONTEXT ====='
+          base64 --decode android/app/src/main/assets/index.html.gz.b64 | gzip -dc > /tmp/prism-index.html
+          echo '===== WEB TARGET MATCHES ====='
           python3 - <<'PY'
           from pathlib import Path
           import re
-          root=Path('android/app/src/main')
-          rx=re.compile(r'connection interrupted|personal best saved|offline demo|server-issued|there.?s more hop|find your flow|splash|prism-runs|wmicrzmalyekinqvcuxt|supabase|navigator\.onLine|fetch\(|heartbeat|pulse|hero|ring|scroll|background',re.I)
-          count=0
-          for p in sorted(root.rglob('*')):
-              if not p.is_file() or p.suffix.lower() not in {'.html','.js','.css','.java','.kt','.xml'}: continue
-              try: lines=p.read_text(errors='ignore').splitlines()
-              except: continue
-              hits=[i for i,l in enumerate(lines) if rx.search(l)]
-              if not hits: continue
-              print(f'--- {p}')
-              shown=set()
-              for i in hits:
-                  if count>=180: break
-                  a=max(0,i-3); b=min(len(lines),i+5)
-                  key=(a,b)
-                  if key in shown: continue
-                  shown.add(key)
-                  for j in range(a,b): print(f'{j+1}: {lines[j]}')
-                  print('...')
-                  count+=1
-              if count>=180: break
+          p=Path('/tmp/prism-index.html')
+          lines=p.read_text(errors='ignore').splitlines()
+          rx=re.compile(r'connection interrupted|personal best saved|offline demo|server-issued|there.?s more hop|find your flow|splash|prism-runs|wmicrzmalyekinqvcuxt|supabase|navigator\.onLine|fetch\(|heartbeat|pulse|hero|ring|scroll|home|result|death|hud|flow',re.I)
+          hits=[i for i,l in enumerate(lines) if rx.search(l)]
+          print('line_count=',len(lines),'hit_count=',len(hits))
+          shown=[]
+          for i in hits:
+              a=max(0,i-5); b=min(len(lines),i+8)
+              if any(not (b < x or a > y) for x,y in shown): continue
+              shown.append((a,b))
+              print(f'--- CONTEXT {i+1} ---')
+              for j in range(a,b): print(f'{j+1}: {lines[j]}')
+              if len(shown)>=95: break
           PY
+          echo '===== NATIVE FILES ====='
+          sed -n '1,340p' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          echo '===== THEME ====='
+          cat android/app/src/main/res/values/themes.xml
+          echo '===== NETWORK SECURITY ====='
+          cat android/app/src/main/res/xml/network_security_config.xml
+          echo '===== APP BUILD ====='
+          sed -n '1,180p' android/app/build.gradle
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
