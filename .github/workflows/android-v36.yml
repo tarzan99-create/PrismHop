@@ -5,7 +5,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'android/**'
+      - 'Prism-Hop-V3.6-Android-Source.zip'
       - '.github/workflows/android-v36.yml'
 
 permissions:
@@ -17,6 +17,10 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - name: Expand Prism Hop Android source
+        run: |
+          unzip -q Prism-Hop-V3.6-Android-Source.zip -d build-src
+          cp -R build-src/Prism-Hop-V3.6-Android/android ./android
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -25,8 +29,7 @@ jobs:
         with:
           gradle-version: '8.13'
       - name: Build debug APK and release AAB
-        run: |
-          gradle -p android :app:assembleDebug :app:bundleRelease --stacktrace
+        run: gradle -p android :app:assembleDebug :app:bundleRelease --stacktrace
       - name: Inspect outputs
         run: |
           test -f android/app/build/outputs/apk/debug/app-debug.apk
