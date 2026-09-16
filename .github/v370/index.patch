@@ -1,0 +1,132 @@
+--- /mnt/data/v362src/android/app/src/main/assets/index.html	2026-09-16 21:50:44.000000000 +0000
++++ /mnt/data/v370work/android/app/src/main/assets/index.html	2026-09-16 22:56:12.874466848 +0000
+@@ -3428,7 +3428,14 @@
+         impactNoise(now+.001,.012,.040,2500,master);lastImmediate=now;
+       }
+     }
+-    if((kind==='shard'||kind==='fragment')&&soundOn){const now=audio.currentTime;impactNoise(now+.001,.018,kind==='fragment'?.050:.036,kind==='fragment'?4300:3300,master);}
++    if((kind==='shard'||kind==='fragment')&&soundOn){
++      const now=audio.currentTime,chord=chordAt(now);
++      // V3.7.0 collection signature: every physical pickup gets the same immediate
++      // success sparkle, while its existing shard/fragment motif still follows the song.
++      impactNoise(now+.001,.018,kind==='fragment'?.050:.040,kind==='fragment'?4300:3500,master);
++      voice(chord[2]+24,now+.002,.072,.052,'sine',4800,-.12,master);
++      voice(chord[3]+36,now+.034,.090,.034,'triangle',5400,.12,master);
++    }
+     if(['pass','perfect','shard','fragment','echo','close','milestone','record','shield-ready','shield-break','unlock'].includes(kind))enqueue(kind,payload);
+   }
+   function ui(kind='tab') {
+@@ -5230,7 +5237,7 @@
+     <div><span id="race31-clock-label">ENDS AT 00:00 UTC</span><strong id="race31-clock" aria-label="Time remaining in the daily race">--:--:--</strong></div>
+     <div class="race31-date"><b id="race31-date">TODAY’S RACE</b><span id="race31-count">Classic · worldwide</span></div>
+    </div>
+-   <p class="race31-provisional"><span aria-hidden="true">◇</span> Server replay verified V1. Official Spotlight awards stay off until native device integrity.</p>
++   <p class="race31-provisional"><span aria-hidden="true">◇</span> Server replay V1 + Google Play Integrity for V3.7 Android runs. Official Spotlight activation follows device-attested race testing.</p>
+    <div class="race31-toolbar"><span id="v3-board-state" role="status" aria-live="polite">Sign in to see the live standings.</span><button id="v3-board-refresh" class="race31-refresh" type="button" aria-label="Refresh Daily Race">↻ <span>Refresh</span></button></div>
+    <p class="race31-change" id="race31-change" role="status" aria-live="polite" hidden></p>
+    <div id="race31-podium" class="race31-podium" aria-label="Provisional top three"></div>
+@@ -5238,7 +5245,7 @@
+    <div id="race31-list-header" class="race31-list-header"><h3>THE CHASE</h3><span id="race31-top-label">TOP 50</span></div>
+    <ol id="v3-board-rows" class="race31-rows" aria-label="Daily Race positions four to fifty"></ol>
+    <div class="race31-above" id="race31-above" hidden></div>
+-   <details class="race31-rules"><summary>Race rules &amp; privacy <span aria-hidden="true">+</span></summary><p>Only your highest accepted online Classic score today counts. Finish and submit before 00:00 UTC. Equal scores are ordered by the earlier server-recorded achievement. To pass the player above you, score at least one point more.</p><p>Chill and offline runs stay personal. V3.4 validates event order, server-issued gate/fragment sequence, checkpoints, timing and score reconstruction. This is server replay V1, not native device attestation. Top 3 is still not an official Spotlight award.</p><p>Private players use a race-specific alias. Photos, email addresses and social links are not shown on this board. Approved public profiles can open as player cards. Spotlight previews the previous verified V1 Top 3. Official awards remain disabled until native Android device integrity.</p></details>
++   <details class="race31-rules"><summary>Race rules &amp; privacy <span aria-hidden="true">+</span></summary><p>Only your highest accepted online Classic score today counts. Finish and submit before 00:00 UTC. Equal scores are ordered by the earlier server-recorded achievement. To pass the player above you, score at least one point more.</p><p>Chill and offline runs stay personal. V3.4 validates event order, server-issued gate/fragment sequence, checkpoints, timing and score reconstruction. V3.7 Android adds Google Play app/device integrity on top of server replay. Older accepted runs remain V1-only. Top 3 remains preview until the attested rollout is confirmed.</p><p>Private players use a race-specific alias. Photos, email addresses and social links are not shown on this board. Approved public profiles can open as player cards. Spotlight previews the previous verified V1 Top 3. Official awards remain disabled until native Android device integrity.</p></details>
+    <div class="race31-utilities"><span>Real runs. No demo rivals.</span><button id="v3-board-signin" type="button">Account ↗</button></div>
+   </div>
+   <footer class="race31-footer">
+@@ -5416,7 +5423,10 @@
+  SESSION_ALREADY_USED:'This session was already submitted or replaced.',
+  SESSION_NOT_FOUND:'That online session is no longer valid.',
+  RUN_QUARANTINED:'This run could not be server-verified and was held out of the verified standings. Your personal progress is safe.',
+- REQUEST_REJECTED:'The server did not accept this run.'
++ REQUEST_REJECTED:'The server did not accept this run.',
++ DEVICE_ATTESTATION_REQUIRED:'Google Play verification is required for this competitive run.',
++ DEVICE_ATTESTATION_UNAVAILABLE:'Google Play verification is temporarily unavailable. Personal play still works.',
++ DEVICE_ATTESTATION_FAILED:'This Play build or device did not pass the competitive integrity check. Personal play still works.'
+ };
+ function readable(error){return messages[error?.code]||error?.message||'The request failed. Personal play still works.';}
+ async function request(path,{body={},token=null,method='POST',timeout=10000}={}){
+@@ -5448,6 +5458,27 @@
+  try{return await request('/functions/v1/prism-runs',{body,token});}
+  catch(e){if(e.status===401&&epoch===authEpoch){clearAuth();render();}throw e;}
+ }
++async function attestServer(body){
++ const epoch=authEpoch,token=await freshToken();
++ try{return await request('/functions/v1/prism-attest',{body,token,timeout:18000});}
++ catch(e){if(e.status===401&&epoch===authEpoch){clearAuth();render();}throw e;}
++}
++const nativeIntegrityWaiters=new Map();
++window.PrismNativeHost=window.PrismNativeHost||{};
++window.PrismNativeHost.integrityToken=(requestId,token,error)=>{
++ const item=nativeIntegrityWaiters.get(String(requestId));if(!item)return;
++ nativeIntegrityWaiters.delete(String(requestId));clearTimeout(item.timer);
++ if(token)item.resolve(String(token));else item.reject(Object.assign(new Error(error||'Play Integrity token unavailable.'),{code:error||'DEVICE_ATTESTATION_UNAVAILABLE'}));
++};
++function requestNativeIntegrity(requestHash){
++ return new Promise((resolve,reject)=>{
++  if(!window.PrismNative?.requestIntegrityToken)return reject(Object.assign(new Error('Play Integrity is unavailable in this build.'),{code:'DEVICE_ATTESTATION_UNAVAILABLE'}));
++  const requestId=(globalThis.crypto?.randomUUID?.()||('pi-'+Date.now()+'-'+Math.random().toString(36).slice(2)));
++  const timer=setTimeout(()=>{nativeIntegrityWaiters.delete(requestId);reject(Object.assign(new Error('Play Integrity timed out.'),{code:'DEVICE_ATTESTATION_UNAVAILABLE'}));},25000);
++  nativeIntegrityWaiters.set(requestId,{resolve,reject,timer});
++  try{window.PrismNative.requestIntegrityToken(String(requestHash||''),requestId);}catch(error){clearTimeout(timer);nativeIntegrityWaiters.delete(requestId);reject(Object.assign(error instanceof Error?error:new Error('Play Integrity request failed.'),{code:'DEVICE_ATTESTATION_UNAVAILABLE'}));}
++ });
++}
+ function setBusy(on){authBusy=on;['v3-signin','v3-signup','v3-signout'].forEach(id=>$(id).disabled=on);}
+ async function authenticate(create){
+  if(authBusy)return;
+@@ -5484,9 +5515,19 @@
+  if(preparing)return;
+  abandon('New run');const epoch=runEpoch;result=null;acceptedUntil=0;preparing=true;render();$('v3-preparing').hidden=false;
+  try{
+-  const data=await server({action:'start',mode:info.mode,app_version:(window.PrismNative?'3.6.2-android':'3.4.0-web')});
++  const data=await server({action:'start',mode:info.mode,app_version:(window.PrismNative?'3.7.0-android':'3.4.0-web')});
+   if(epoch!==runEpoch)return;
+   if(!data?.session_id||!data.server_nonce||data.mode!=='classic'||data.integrity_version!==1||!data.run_seed||!data.checkpoint_token)throw new Error('The server did not issue a verified run session.');
++  if(window.PrismNative&&data.attestation_required){
++   $('prepare-title').textContent='Checking this Play build.';
++   const challenge=await attestServer({action:'challenge',session_id:data.session_id,server_nonce:data.server_nonce});
++   if(!challenge?.request_hash)throw Object.assign(new Error('Google Play verification challenge was unavailable.'),{code:'DEVICE_ATTESTATION_UNAVAILABLE'});
++   const integrityToken=await requestNativeIntegrity(challenge.request_hash);
++   if(epoch!==runEpoch)return;
++   const attested=await attestServer({action:'attest',session_id:data.session_id,server_nonce:data.server_nonce,integrity_token:integrityToken});
++   if(attested?.device_attested!==true)throw Object.assign(new Error('Google Play could not verify this competitive run.'),{code:'DEVICE_ATTESTATION_FAILED'});
++   data.device_attested=true;data.attestation_state='passed';
++  }
+   if(navigator.onLine===false||document.hidden){preparing=false;$('v3-preparing').hidden=true;return;}
+   active={...data,epoch,startedAt:performance.now(),userId:auth.user?.id};integrityEvents=[];game()?.setIntegritySeed?.(data.run_seed);preparing=false;$('v3-preparing').hidden=true;
+   startCallback();
+@@ -5518,7 +5559,7 @@
+   const receipt=await server({action:'finish',session_id:current.session_id,server_nonce:current.server_nonce,checkpoint_token:current.checkpoint_token,stats,integrity:{version:1,event_hash,events}});
+   if(epoch!==runEpoch)return;
+   if(receipt?.accepted!==true||!receipt.run_id)throw Object.assign(new Error('The server did not verify the run.'),{code:receipt?.quarantined?'RUN_QUARANTINED':'REQUEST_REJECTED'});
+-  result=receipt.quarantined?{epoch,title:'RUN UNDER REVIEW',copy:receipt.score+' points were received but held out of the verified standings for review. Your personal progress is safe.',uploaded:true,receipt}:{epoch,title:'✓ VERIFIED · V1',copy:receipt.score+' points passed server replay, event-order, checkpoint and score-consistency checks. Native device attestation is still reserved for the Android release; Spotlight awards remain off.',uploaded:true,receipt};
++  result=receipt.quarantined?{epoch,title:'RUN UNDER REVIEW',copy:receipt.score+' points were received but held out of the verified standings for review. Your personal progress is safe.',uploaded:true,receipt}:{epoch,title:receipt.device_attested?'✓ VERIFIED · PLAY':'✓ VERIFIED · V1',copy:receipt.device_attested?receipt.score+' points passed server replay plus Google Play app/device integrity checks.':receipt.score+' points passed server replay, event-order, checkpoint and score-consistency checks.',uploaded:true,receipt};
+   acceptedUntil=Date.now()+2500;render();paintResult();dailyRace.receipt();profileUI?.invalidate();setTimeout(render,2600);
+  }catch(e){
+   if(epoch!==runEpoch)return;
+@@ -5534,11 +5575,11 @@
+ function sync(){
+  const info=game()?.snapshot(),online=navigator.onLine!==false,button=$('v3-account-btn');if(!button)return;
+  const personal=info?.personalOnly;
+- button.textContent=preparing?'CONNECTING…':active?'● RACE · V1':acceptedUntil>Date.now()?'✓ VERIFIED':!online?'● OFFLINE':signed()?'● ACCOUNT':'SIGN IN';
++ button.textContent=preparing?'CONNECTING…':active?(active.device_attested?'● RACE · PLAY':'● RACE · V1'):acceptedUntil>Date.now()?'✓ VERIFIED':!online?'● OFFLINE':signed()?'● ACCOUNT':'SIGN IN';
+  button.classList.toggle('online',online&&signed());
+- const text=!online?'OFFLINE · PERSONAL PLAY':personal?'PERSONAL PLAY · LOCAL SAVE':active?'CLASSIC · SERVER REPLAY SESSION':signed()?'ACCOUNT CONNECTED · VERIFIED RACE':'PERSONAL PLAY · SIGN IN FOR VERIFIED RACE';
++ const text=!online?'OFFLINE · PERSONAL PLAY':personal?'PERSONAL PLAY · LOCAL SAVE':active?(active.device_attested?'CLASSIC · PLAY VERIFIED SESSION':'CLASSIC · SERVER REPLAY SESSION'):signed()?'ACCOUNT CONNECTED · VERIFIED RACE':'PERSONAL PLAY · SIGN IN FOR VERIFIED RACE';
+  $('connection-chip').textContent=text;
+- $('offline-copy').textContent='Personal play works offline. Online Classic runs use a server-issued sequence, event checkpoints and deterministic replay. Loss of connection keeps the run personal. Native device attestation and official Spotlight awards are not live yet.';
++ $('offline-copy').textContent='Personal play works offline. Online Classic runs use a server-issued sequence, event checkpoints and deterministic replay. Loss of connection keeps the run personal. Google Play Integrity is required for V3.7 Android competitive runs. Personal play remains available if attestation cannot be completed.';
+  const tag=document.querySelector('.home-race-copy i');if(tag)tag.textContent='V1';
+  $('home-race-title').textContent=signed()?'Your verified V1 leaderboard':'Play Classic. Enter the verified race.';
+  $('home-race-gap').textContent='Server replay V1 · public cards · verified Spotlight preview';
+@@ -6627,6 +6668,10 @@
+ @media(max-height:760px){.home-prism-orbit{width:68px;height:68px}.home-prism-dot{display:none}}
+ @media(max-height:680px){.home-prism-orbit{width:56px;height:56px}.home-prism-ring{inset:1px}.home-prism-inner{inset:12px}.home-prism-core{width:17px;height:17px;margin:-8.5px 0 0 -8.5px}}
+ @media(prefers-reduced-motion:reduce){.home-prism-ring,.home-prism-inner,.home-prism-core,.home-prism-dot{animation:none!important}}
++/* V3.7.0 — native Home polish. Tall-phone Home screens are deliberately fixed: no empty spacer scroll. */
++.home-prism-orbit{contain:layout style!important;overflow:visible!important}
++.home-prism-dot{z-index:3}
++@media(min-height:761px) and (orientation:portrait){.game .home{overflow-y:hidden!important;overscroll-behavior:none!important;touch-action:none!important;padding-bottom:calc(var(--dock-height) + 4px)!important}}
+ </style>
+ <script id="v3311-connected-launch">
+ (()=>{
