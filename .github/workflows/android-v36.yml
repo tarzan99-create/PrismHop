@@ -94,11 +94,14 @@ jobs:
       - name: Apply V3.9.2 patient cinematic and cleanup
         run: |
           python3 .github/v392/patch.py
+          python3 .github/v392/fix_pause.py
           grep -q 'versionCode 43' android/app/build.gradle
           grep -q "versionName '3.9.2-test'" android/app/build.gradle
           grep -q '3.9.2-android' android/app/src/main/assets/index.html
           grep -q 'v392-story-style' android/app/src/main/assets/index.html
           grep -q 'v392-native-back' android/app/src/main/assets/index.html
+          grep -q "visible('paused')" android/app/src/main/assets/index.html
+          ! grep -q "pause-overlay" android/app/src/main/assets/index.html
           grep -q 'schema_version!==4' android/app/src/main/assets/index.html
           grep -q 'No Play-Integrity-verified scores yet' android/app/src/main/assets/index.html
           grep -q '<p>KEEP THE LIGHT ALIVE.</p>' android/app/src/main/assets/index.html
