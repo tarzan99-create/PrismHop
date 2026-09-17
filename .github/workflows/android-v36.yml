@@ -1,4 +1,4 @@
-name: Prism Hop Android V3.9.0
+name: Prism Hop Android V3.9.1
 
 on:
   workflow_dispatch:
@@ -10,6 +10,7 @@ on:
       - '.github/v370/**'
       - '.github/v380/**'
       - '.github/v390/**'
+      - '.github/v391/**'
       - '.github/workflows/android-v36.yml'
 
 permissions:
@@ -78,8 +79,17 @@ jobs:
           grep -q 'KEEP THE LIGHT ALIVE.' android/app/src/main/assets/index.html
           grep -q 'Replay The Shattering' android/app/src/main/assets/index.html
           grep -q 'if(window.__PrismStoryOwnsLaunch)return' android/app/src/main/assets/index.html
-          grep -q 'private static final String APP_VERSION = "3.9.0-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
-          zip -qr Prism-Hop-V3.9.0-Android-Source.zip android -x 'android/.gradle/*' 'android/app/build/*'
+      - name: Apply V3.9.1 cinematic composition
+        run: |
+          python3 .github/v391/patch.py
+          grep -q 'versionCode 42' android/app/build.gradle
+          grep -q "versionName '3.9.1-test'" android/app/build.gradle
+          grep -q '3.9.1-android' android/app/src/main/assets/index.html
+          grep -q 'v391-story-style' android/app/src/main/assets/index.html
+          grep -q "showCopy('YOURS.','yours')" android/app/src/main/assets/index.html
+          grep -q '22220' android/app/src/main/assets/index.html
+          grep -q 'private static final String APP_VERSION = "3.9.1-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          zip -qr Prism-Hop-V3.9.1-Android-Source.zip android -x 'android/.gradle/*' 'android/app/build/*'
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -94,9 +104,9 @@ jobs:
           test -n "$KEYSTORE_BASE64"
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/prism-hop-upload.jks"
           test -s "$RUNNER_TEMP/prism-hop-upload.jks"
-      - name: Build V3.9.0
+      - name: Build V3.9.1
         run: gradle -p android :app:assembleDebug :app:bundleRelease --stacktrace
-      - name: Sign V3.9.0 release AAB
+      - name: Sign V3.9.1 release AAB
         env:
           STORE_PASS: ${{ secrets.PRISM_HOP_KEYSTORE_PASSWORD }}
           KEY_PASS: ${{ secrets.PRISM_HOP_KEY_PASSWORD }}
@@ -108,20 +118,20 @@ jobs:
             -storepass "$STORE_PASS" -keypass "$KEY_PASS" \
             android/app/build/outputs/bundle/release/app-release.aab "$KEY_ALIAS"
           jarsigner -verify -verbose -certs android/app/build/outputs/bundle/release/app-release.aab
-          cp android/app/build/outputs/bundle/release/app-release.aab Prism-Hop-V3.9.0-Play-Signed.aab
+          cp android/app/build/outputs/bundle/release/app-release.aab Prism-Hop-V3.9.1-Play-Signed.aab
       - name: Inspect outputs
         run: |
           test -f android/app/build/outputs/apk/debug/app-debug.apk
-          test -s Prism-Hop-V3.9.0-Play-Signed.aab
-          test -s Prism-Hop-V3.9.0-Android-Source.zip
-          sha256sum android/app/build/outputs/apk/debug/app-debug.apk Prism-Hop-V3.9.0-Play-Signed.aab Prism-Hop-V3.9.0-Android-Source.zip | tee Prism-Hop-V3.9.0-SHA256.txt
+          test -s Prism-Hop-V3.9.1-Play-Signed.aab
+          test -s Prism-Hop-V3.9.1-Android-Source.zip
+          sha256sum android/app/build/outputs/apk/debug/app-debug.apk Prism-Hop-V3.9.1-Play-Signed.aab Prism-Hop-V3.9.1-Android-Source.zip | tee Prism-Hop-V3.9.1-SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: Prism-Hop-V3.9.0-Play-Signed
+          name: Prism-Hop-V3.9.1-Play-Signed
           path: |
-            Prism-Hop-V3.9.0-Play-Signed.aab
+            Prism-Hop-V3.9.1-Play-Signed.aab
             android/app/build/outputs/apk/debug/app-debug.apk
-            Prism-Hop-V3.9.0-Android-Source.zip
-            Prism-Hop-V3.9.0-SHA256.txt
+            Prism-Hop-V3.9.1-Android-Source.zip
+            Prism-Hop-V3.9.1-SHA256.txt
           if-no-files-found: error
           retention-days: 14
