@@ -1,0 +1,294 @@
+name: Prism Hop Android V3.13.1 Haptic Back Fix
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/android-core-v3131.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Restore verified pre-Story baseline
+        uses: actions/checkout@v4
+        with:
+          ref: 9960d0bc021ca90c1c970d6e082fb584cef09864
+
+      - name: Expand Prism Hop V3.6 baseline
+        run: |
+          unzip -q Prism-Hop-V3.6-Android-Source.zip -d build-src
+          cp -R build-src/Prism-Hop-V3.6-Android/android ./android
+          printf '\nandroid.useAndroidX=true\n' >> android/gradle.properties
+
+      - name: Apply V3.6.1 native and UI polish
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,gzip
+          p=Path('android/app/src/main/assets/index.html.gz.b64')
+          p.with_name('index.html').write_bytes(gzip.decompress(base64.b64decode(p.read_text().strip())))
+          PY
+          for p in .github/v361/index-1.patch .github/v361/index-2.patch .github/v361/index-3.patch .github/v361/index-4.patch; do
+            patch --batch android/app/src/main/assets/index.html < "$p"
+          done
+          patch --batch android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java < .github/v361/mainactivity.patch
+          patch --batch android/app/build.gradle < .github/v361/gradle.patch
+
+      - name: Apply V3.6.2 competitive session version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/src/main/assets/index.html')
+          s=p.read_text().replace('Prism Hop V3.6.1','Prism Hop V3.6.2').replace('3.6.1-android','3.6.2-android')
+          p.write_text(s)
+          p=Path('android/app/build.gradle')
+          g=p.read_text().replace('versionCode 37','versionCode 38',1).replace("versionName '3.6.1-test'","versionName '3.6.2-test'",1)
+          p.write_text(g)
+          p=Path('android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java')
+          a=p.read_text().replace('private static final String APP_VERSION = "3.6.1-test";','private static final String APP_VERSION = "3.6.2-test";',1)
+          p.write_text(a)
+          PY
+
+      - name: Apply V3.7.0 Play Integrity and polish
+        run: |
+          patch --batch android/app/src/main/assets/index.html < .github/v370/index.patch
+          patch --batch android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java < .github/v370/mainactivity.patch
+          patch --batch android/app/build.gradle < .github/v370/gradle.patch
+
+      - name: Apply V3.8.0 Daily Spotlight
+        run: python3 .github/v380/patch.py
+
+      - name: Apply V3.9.0 The Shattering launch cinematic
+        run: python3 .github/v390/patch.py
+
+      - name: Apply V3.9.1 cinematic composition
+        run: python3 .github/v391/patch.py
+
+      - name: Apply V3.9.2 patient cinematic, cleanup and Back fix
+        run: |
+          python3 .github/v392/patch.py
+          python3 .github/v392/fix_pause.py
+
+      - name: Apply V3.13.1 haptic and Back regression fixes
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, gzip, re
+
+          html=Path('android/app/src/main/assets/index.html')
+          s=html.read_text()
+
+          forbidden=[
+              'STORY MODE','Story Mode','BEGIN STORY','CONTINUE JOURNEY',
+              'THE OBSIDIAN DRIFT','MEMORY GATES RESTORED',
+              'SECTOR 01 · LEVEL','FIRST SPARK'
+          ]
+          found=[x for x in forbidden if x in s]
+          if found:
+              raise SystemExit('Unexpected Story Mode content: '+repr(found))
+
+          if '3.9.2-android' not in s:
+              raise SystemExit('Expected V3.9.2 client marker missing')
+          s=s.replace('3.9.2-android','3.13.1-android',1)
+
+          old="let hapticsOn=store.get('haptics',false)===true;"
+          if old not in s:
+              raise SystemExit('Haptic default target missing')
+          s=s.replace(old,"let hapticsOn=store.get('haptics',true)!==false;",1)
+
+          old="function nativeHaptic(kind){try{window.PrismNative?.haptic?.(String(kind));}catch{}}"
+          new="""function nativeHaptic(kind){
+            if(!hapticsOn||reduceMotion||realNow-hapticAt<=.035)return false;
+            hapticAt=realNow;
+            try{
+              if(window.PrismNative?.haptic){window.PrismNative.haptic(String(kind));return true;}
+              if(navigator.vibrate){navigator.vibrate(8);return true;}
+            }catch{}
+            return false;
+          }"""
+          if old not in s:
+              raise SystemExit('nativeHaptic target missing')
+          s=s.replace(old,new,1)
+
+          event_new="""function eventHaptic(kind) {
+            if(!hapticsOn||reduceMotion)return;
+            if(kind==='hop'&&realNow-hapticAt<.10)return;
+            const pulse={hop:4,pass:6,perfect:9,shard:5,fragment:7,close:[9,18,5],
+              milestone:[10,22,10],flow:[14,32,18],'shield-ready':[6,18,6],
+              'shield-break':[15,22,9],death:[20,22,24],start:5,echo:8}[kind];
+            if(pulse===undefined||realNow-hapticAt<=.035)return;
+            hapticAt=realNow;
+            try{
+              if(window.PrismNative?.haptic){window.PrismNative.haptic(String(kind));return;}
+              if(navigator.vibrate)navigator.vibrate(pulse);
+            }catch{}
+          }"""
+          s,n=re.subn(r"function eventHaptic\(kind\) \{.*?\n\}\nfunction connectivityCopy",
+                      event_new+"\nfunction connectivityCopy",s,count=1,flags=re.S)
+          if n!=1:
+              raise SystemExit(f'eventHaptic replacement count {n}')
+
+          vib_new="""function vibrate(pattern) {
+            if(!hapticsOn||reduceMotion||realNow-hapticAt<=.035)return;
+            hapticAt=realNow;
+            try{
+              if(window.PrismNative?.hapticPattern){
+                const p=Array.isArray(pattern)?pattern:[pattern];
+                window.PrismNative.hapticPattern(JSON.stringify(p));
+                return;
+              }
+              if(navigator.vibrate)navigator.vibrate(pattern);
+            }catch{}
+          }"""
+          s,n=re.subn(r"function vibrate\(pattern\) \{.*?\n\}\nfunction syncMusicUI",
+                      vib_new+"\nfunction syncMusicUI",s,count=1,flags=re.S)
+          if n!=1:
+              raise SystemExit(f'vibrate replacement count {n}')
+
+          back_old="if(visible('paused'))return click('pause-menu');\n   return false;"
+          back_new="if(visible('paused'))return click('pause-menu');\n   if(visible('home'))return true;\n   return false;"
+          if back_old not in s:
+              raise SystemExit('Home Back target missing')
+          s=s.replace(back_old,back_new,1)
+
+          html.write_text(s)
+          encoded=html.with_name('index.html.gz.b64')
+          encoded.write_text(base64.b64encode(gzip.compress(s.encode(),9)).decode())
+
+          gradle=Path('android/app/build.gradle')
+          g=gradle.read_text()
+          if 'versionCode 43' not in g or "versionName '3.9.2-test'" not in g:
+              raise SystemExit('Expected V3.9.2 Gradle version missing')
+          g=g.replace('versionCode 43','versionCode 48',1)
+          g=g.replace("versionName '3.9.2-test'","versionName '3.13.1-test'",1)
+          gradle.write_text(g)
+
+          activity=Path('android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java')
+          a=activity.read_text()
+          old='private static final String APP_VERSION = "3.9.2-test";'
+          if old not in a:
+              raise SystemExit('Expected V3.9.2 native version missing')
+          a=a.replace(old,'private static final String APP_VERSION = "3.13.1-test";',1)
+
+          old="""    @Override public void onBackPressed() {
+                  if (Build.VERSION.SDK_INT < 33) handleBack(); else super.onBackPressed();
+              }"""
+          new="""    @Override public void onBackPressed() {
+                  handleBack();
+              }"""
+          if old not in a:
+              raise SystemExit('Native Back target missing')
+          a=a.replace(old,new,1)
+
+          haptic_new="""    private void hapticEvent(String kind) {
+                  switch(kind==null?"":kind){
+                      case "hop" -> vibrate("[8]");
+                      case "pass" -> vibrate("[10]");
+                      case "perfect" -> vibrate("[13,18,17]");
+                      case "close" -> vibrate("[12,18,8]");
+                      case "shard" -> vibrate("[8]");
+                      case "fragment" -> vibrate("[11,17,14]");
+                      case "milestone" -> vibrate("[12,20,12]");
+                      case "flow" -> vibrate("[12,24,17,28,23]");
+                      case "shield-ready" -> vibrate("[8,18,8]");
+                      case "shield-break" -> vibrate("[18,20,12]");
+                      case "death" -> vibrate("[30,20,44]");
+                      case "start" -> vibrate("[8]");
+                      case "echo" -> vibrate("[10,18,10]");
+                      default -> vibrate("[9]");
+                  }
+              }"""
+          a,n=re.subn(r"    private void hapticEvent\(String kind\) \{.*?\n    \}\n\n    private final class PrismNativeBridge",
+                      haptic_new+"\n\n    private final class PrismNativeBridge",a,count=1,flags=re.S)
+          if n!=1:
+              raise SystemExit(f'Native haptic replacement count {n}')
+
+          activity.write_text(a)
+          PY
+
+          grep -q 'versionCode 48' android/app/build.gradle
+          grep -q "versionName '3.13.1-test'" android/app/build.gradle
+          grep -q '3.13.1-android' android/app/src/main/assets/index.html
+          grep -q 'private static final String APP_VERSION = "3.13.1-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          grep -q "store.get('haptics',true)" android/app/src/main/assets/index.html
+          grep -q "if(visible('home'))return true" android/app/src/main/assets/index.html
+          grep -q 'window.PrismNative.haptic(String(kind))' android/app/src/main/assets/index.html
+          grep -q 'window.PrismNative.hapticPattern' android/app/src/main/assets/index.html
+          grep -q 'case "hop" -> vibrate' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          ! grep -qi 'story mode' android/app/src/main/assets/index.html
+          ! grep -q 'THE OBSIDIAN DRIFT' android/app/src/main/assets/index.html
+          ! grep -q 'FIRST SPARK' android/app/src/main/assets/index.html
+
+      - name: Validate embedded JavaScript
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('android/app/src/main/assets/index.html').read_text()
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S|re.I)
+          Path('/tmp/prism-inline.js').write_text('\n;\n'.join(scripts))
+          print('inline script blocks:',len(scripts))
+          PY
+          node --check /tmp/prism-inline.js
+
+      - name: Package V3.13.1 source
+        run: zip -qr Prism-Hop-V3.13.1-Core-Android-Source.zip android -x 'android/.gradle/*' 'android/app/build/*'
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Restore Prism Hop upload keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRISM_HOP_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/prism-hop-upload.jks"
+          test -s "$RUNNER_TEMP/prism-hop-upload.jks"
+
+      - name: Build V3.13.1 Core
+        run: gradle -p android :app:assembleDebug :app:bundleRelease --stacktrace
+
+      - name: Sign V3.13.1 release AAB
+        env:
+          STORE_PASS: ${{ secrets.PRISM_HOP_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.PRISM_HOP_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRISM_HOP_KEY_ALIAS }}
+        run: |
+          test -n "$STORE_PASS" && test -n "$KEY_PASS" && test -n "$KEY_ALIAS"
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore "$RUNNER_TEMP/prism-hop-upload.jks" \
+            -storepass "$STORE_PASS" -keypass "$KEY_PASS" \
+            android/app/build/outputs/bundle/release/app-release.aab "$KEY_ALIAS"
+          jarsigner -verify -verbose -certs android/app/build/outputs/bundle/release/app-release.aab
+          cp android/app/build/outputs/bundle/release/app-release.aab Prism-Hop-V3.13.1-Core-Play-Signed.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk Prism-Hop-V3.13.1-Core-Test.apk
+
+      - name: Inspect outputs
+        run: |
+          test -s Prism-Hop-V3.13.1-Core-Test.apk
+          test -s Prism-Hop-V3.13.1-Core-Play-Signed.aab
+          test -s Prism-Hop-V3.13.1-Core-Android-Source.zip
+          sha256sum Prism-Hop-V3.13.1-Core-Test.apk Prism-Hop-V3.13.1-Core-Play-Signed.aab Prism-Hop-V3.13.1-Core-Android-Source.zip | tee Prism-Hop-V3.13.1-Core-SHA256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Prism-Hop-V3.13.1-Haptic-Back-Fix
+          path: |
+            Prism-Hop-V3.13.1-Core-Test.apk
+            Prism-Hop-V3.13.1-Core-Play-Signed.aab
+            Prism-Hop-V3.13.1-Core-Android-Source.zip
+            Prism-Hop-V3.13.1-Core-SHA256.txt
+          if-no-files-found: error
+          retention-days: 14
