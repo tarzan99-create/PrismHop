@@ -114,6 +114,10 @@ jobs:
           raw=base64.b64decode(Path('.github/v3100/patch.py.gz.b64').read_text().strip())
           code=gzip.decompress(raw).decode()
           exec(compile(code,'.github/v3100/patch.py','exec'))
+          p=Path('android/app/src/main/assets/index.html')
+          s=p.read_text()
+          s=s.replace("THERE'S MORE HOP",'').replace('THERE’S MORE HOP','')
+          p.write_text(s)
           PY
           python3 - <<'PY'
           from pathlib import Path
