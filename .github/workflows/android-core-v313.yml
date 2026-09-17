@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
 
+# Trigger clean Core build after workflow registration.
 jobs:
   build:
     runs-on: ubuntu-latest
