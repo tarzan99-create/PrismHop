@@ -1,0 +1,108 @@
+name: Prism Hop Android V3.12.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/v3120/**'
+      - '.github/workflows/android-v312.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore verified V3.11.0 baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail --location -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/10498928541/zip" -o v311.zip
+          unzip -q v311.zip -d v311
+          test -s v311/Prism-Hop-V3.11.0-Android-Source.zip
+          unzip -q v311/Prism-Hop-V3.11.0-Android-Source.zip -d src
+          cp -R src/android ./android
+
+      - name: Apply V3.12 First Spark 2.5D vertical slice
+        run: |
+          python3 - <<'PY'
+          import base64,gzip
+          from pathlib import Path
+          raw=base64.b64decode(Path('.github/v3120/patch.py.gz.b64').read_text().strip())
+          code=gzip.decompress(raw).decode()
+          exec(compile(code,'.github/v3120/patch.py','exec'))
+          PY
+          grep -q 'versionCode 46' android/app/build.gradle
+          grep -q "versionName '3.12.0-test'" android/app/build.gradle
+          grep -q '3.12.0-android' android/app/src/main/assets/index.html
+          grep -q 'story-cinematic-v312' android/app/src/main/assets/index.html
+          grep -q 'AFTER THE SHATTERING, ONE LIGHT REMAINED.' android/app/src/main/assets/index.html
+          grep -q 'storyDrawDeathFx312' android/app/src/main/assets/index.html
+          grep -q 'MEMORY GATE AHEAD' android/app/src/main/assets/index.html
+          grep -q 'private static final String APP_VERSION = "3.12.0-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,subprocess,tempfile
+          s=Path('android/app/src/main/assets/index.html').read_text()
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S|re.I)
+          for i,js in enumerate(scripts):
+              p=Path(tempfile.gettempdir())/f'prism312-{i}.js'; p.write_text(js)
+              subprocess.run(['node','--check',str(p)],check=True,stdout=subprocess.DEVNULL)
+          print('V3.12 JS validation passed:',len(scripts),'scripts')
+          PY
+          zip -qr Prism-Hop-V3.12.0-Android-Source.zip android -x 'android/.gradle/*' 'android/app/build/*'
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Restore upload keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRISM_HOP_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/prism-hop-upload.jks"
+          test -s "$RUNNER_TEMP/prism-hop-upload.jks"
+
+      - name: Build V3.12.0
+        run: gradle -p android :app:assembleDebug :app:bundleRelease --stacktrace
+
+      - name: Sign V3.12.0
+        env:
+          STORE_PASS: ${{ secrets.PRISM_HOP_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.PRISM_HOP_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRISM_HOP_KEY_ALIAS }}
+        run: |
+          test -n "$STORE_PASS" && test -n "$KEY_PASS" && test -n "$KEY_ALIAS"
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore "$RUNNER_TEMP/prism-hop-upload.jks" -storepass "$STORE_PASS" -keypass "$KEY_PASS" android/app/build/outputs/bundle/release/app-release.aab "$KEY_ALIAS"
+          jarsigner -verify -verbose -certs android/app/build/outputs/bundle/release/app-release.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk Prism-Hop-V3.12.0-First-Spark-Test.apk
+          cp android/app/build/outputs/bundle/release/app-release.aab Prism-Hop-V3.12.0-Play-Signed.aab
+
+      - name: Inspect outputs
+        run: |
+          test -s Prism-Hop-V3.12.0-First-Spark-Test.apk
+          test -s Prism-Hop-V3.12.0-Play-Signed.aab
+          test -s Prism-Hop-V3.12.0-Android-Source.zip
+          sha256sum Prism-Hop-V3.12.0-First-Spark-Test.apk Prism-Hop-V3.12.0-Play-Signed.aab Prism-Hop-V3.12.0-Android-Source.zip | tee Prism-Hop-V3.12.0-SHA256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Prism-Hop-V3.12.0-First-Spark
+          path: |
+            Prism-Hop-V3.12.0-First-Spark-Test.apk
+            Prism-Hop-V3.12.0-Play-Signed.aab
+            Prism-Hop-V3.12.0-Android-Source.zip
+            Prism-Hop-V3.12.0-SHA256.txt
+          if-no-files-found: error
+          retention-days: 14
