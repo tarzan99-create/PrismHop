@@ -115,19 +115,40 @@ jobs:
           code=gzip.decompress(raw).decode()
           exec(compile(code,'.github/v3100/patch.py','exec'))
           PY
-          grep -q 'versionCode 44' android/app/build.gradle
-          grep -q "versionName '3.10.0-test'" android/app/build.gradle
-          grep -q '3.10.0-android' android/app/src/main/assets/index.html
-          grep -q 'SECTOR 01' android/app/src/main/assets/index.html
-          grep -q 'THE OBSIDIAN DRIFT' android/app/src/main/assets/index.html
-          grep -q 'RESTORATION GATE' android/app/src/main/assets/index.html
-          grep -q 'MEMORY TRACE II' android/app/src/main/assets/index.html
-          grep -q 'Obsidian Light' android/app/src/main/assets/index.html
-          grep -q 'EXIT PRISM HOP?' android/app/src/main/assets/index.html
-          grep -q 'exitApp' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
-          grep -q 'PRIMITIVE_CLICK' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
-          grep -q 'private static final String APP_VERSION = "3.10.0-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
-          ! grep -q "THERE'S MORE HOP" android/app/src/main/assets/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          gradle=Path('android/app/build.gradle').read_text()
+          html=Path('android/app/src/main/assets/index.html').read_text()
+          java=Path('android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java').read_text()
+          checks=[
+              ('versionCode 44','versionCode 44',gradle,False),
+              ('versionName 3.10.0-test',"versionName '3.10.0-test'",gradle,False),
+              ('3.10.0 Android client','3.10.0-android',html,False),
+              ('Sector 01','SECTOR 01',html,True),
+              ('The Obsidian Drift','THE OBSIDIAN DRIFT',html,True),
+              ('Restoration Gate','RESTORATION',html,True),
+              ('Memory Trace','MEMORY TRACE',html,True),
+              ('Obsidian Light','OBSIDIAN LIGHT',html,True),
+              ('Exit confirmation','EXIT PRISM HOP?',html,True),
+              ('native exitApp','exitApp',java,False),
+              ('native click haptic','PRIMITIVE_CLICK',java,False),
+              ('native 3.10 app version','private static final String APP_VERSION = "3.10.0-test";',java,False),
+          ]
+          missing=[]
+          for label,needle,haystack,fold in checks:
+              ok=needle.casefold() in haystack.casefold() if fold else needle in haystack
+              print(('OK   ' if ok else 'MISS ') + label)
+              if not ok: missing.append(label)
+          retired=("THERE'S MORE HOP","THERE’S MORE HOP")
+          stale=[p for p in retired if p.casefold() in html.casefold()]
+          if stale:
+              print('MISS retired copy still present:', ', '.join(stale))
+              missing.append('retired THERE’S MORE HOP copy')
+          else:
+              print('OK   retired THERE’S MORE HOP copy removed')
+          if missing:
+              raise SystemExit('V3.10 validation failed: '+', '.join(missing))
+          PY
           python3 - <<'PY'
           from pathlib import Path
           import re,subprocess,tempfile
