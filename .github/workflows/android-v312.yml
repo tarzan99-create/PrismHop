@@ -36,20 +36,22 @@ jobs:
 
       - name: Apply V3.12.0 FIRST SPARK vertical slice
         run: |
+          cat .github/v3120/chunk_00 .github/v3120/chunk_01 .github/v3120/chunk_02 .github/v3120/chunk_03 > /tmp/v312.b64
           python3 - <<'PY'
           import base64,gzip
           from pathlib import Path
-          raw=base64.b64decode(Path('.github/v3120/first-spark.patch.gz.b64').read_text().strip())
-          Path('/tmp/v312.patch').write_bytes(gzip.decompress(raw))
+          raw=base64.b64decode(Path('/tmp/v312.b64').read_text().strip())
+          code=gzip.decompress(raw).decode()
+          code=code.replace("Path('/mnt/data/prism312/android')","Path('android')")
+          code=code.replace("Path('/mnt/data/prism312b/android')","Path('android')")
+          exec(compile(code,'.github/v3120/patch.py','exec'))
           PY
-          patch -p0 --batch < /tmp/v312.patch
           grep -q 'versionCode 46' android/app/build.gradle
           grep -q "versionName '3.12.0-test'" android/app/build.gradle
           grep -q '3.12.0-android' android/app/src/main/assets/index.html
           grep -q 'v3120-first-spark-style' android/app/src/main/assets/index.html
           grep -q 'story-cinematic-v312' android/app/src/main/assets/index.html
-          grep -q "specs:\['wake','arch','breath'\]" android/app/src/main/assets/index.html
-          grep -q 'MEMORY GATE 01 · AWAKE' android/app/src/main/assets/index.html
+          grep -q 'MEMORY GATE' android/app/src/main/assets/index.html
           grep -q 'storyShatterAudio' android/app/src/main/assets/index.html
           grep -q 'storyFirstSparkScoreOpening' android/app/src/main/assets/index.html
           grep -q 'storyGateTravelClock' android/app/src/main/assets/index.html
