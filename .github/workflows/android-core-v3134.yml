@@ -23,6 +23,7 @@ jobs:
       - name: Preserve release patches
         run: |
           cp .github/v3132/patch.py /tmp/prism-v3132.py
+          cp .github/v3134/fix_frame.py /tmp/prism-v3134-frame.py
           cat .github/v3133/chunk_00 .github/v3133/chunk_01 .github/v3133/chunk_02 .github/v3133/chunk_03 | base64 --decode | gzip -d > /tmp/prism-v3133.py
           cat .github/v3134/chunk_00 .github/v3134/chunk_01 | base64 --decode | gzip -d > /tmp/prism-v3134.py
           python3 - <<'PY'
@@ -123,6 +124,7 @@ jobs:
       - name: Apply V3.13.4 safety, performance and Flow pass
         run: |
           python3 /tmp/prism-v3134.py
+          python3 /tmp/prism-v3134-frame.py
           grep -q 'versionCode 51' android/app/build.gradle
           grep -q "versionName '3.13.4-test'" android/app/build.gradle
           grep -q '3.13.4-android' android/app/src/main/assets/index.html
