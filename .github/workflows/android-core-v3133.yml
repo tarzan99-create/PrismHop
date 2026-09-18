@@ -22,7 +22,7 @@ jobs:
       - name: Preserve release patches
         run: |
           cp .github/v3132/patch.py /tmp/prism-v3132.py
-          base64 --decode .github/v3133/patch.py.gz.b64 | gzip -d > /tmp/prism-v3133.py
+          cat .github/v3133/chunk_00 .github/v3133/chunk_01 .github/v3133/chunk_02 .github/v3133/chunk_03 | base64 --decode | gzip -d > /tmp/prism-v3133.py
           python3 - <<'PY'
           from pathlib import Path
           p=Path('/tmp/prism-v3133.py')
