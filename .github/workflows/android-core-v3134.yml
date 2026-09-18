@@ -134,7 +134,7 @@ jobs:
           grep -q 'FRAME_MS=1000/60' android/app/src/main/assets/index.html
           grep -q 'VERIFIED SPOTLIGHT' android/app/src/main/assets/index.html
           grep -q 'handoffAt=reduce?650:5800' android/app/src/main/assets/index.html
-          grep -q 'setFrameRate(60.0f' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          grep -q 'preferredRefreshRate = 60.0f' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
           grep -q 'PowerManager' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
           grep -q 'private static final String APP_VERSION = "3.13.4-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
 
