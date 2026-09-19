@@ -18,6 +18,11 @@ css = """
 .sp-podium{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:10px}.sp-place{border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:8px 4px;background:rgba(255,255,255,.025)}.sp-place b{display:block;font:800 9px Oxanium,sans-serif}.sp-place small{font:600 7px Oxanium,sans-serif;color:#969db1}
 .sp-legacy{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:10px}.sp-stat{padding:7px 2px;border-radius:10px;background:rgba(255,255,255,.035)}.sp-stat b{display:block;font:800 13px Oxanium,sans-serif}.sp-stat small{font:600 6px Oxanium,sans-serif;letter-spacing:.7px;color:#8991a7}
 .sp-run-chase{position:absolute;top:74px;left:50%;transform:translateX(-50%);z-index:12;padding:5px 10px;border-radius:999px;background:rgba(5,8,18,.72);border:1px solid rgba(255,255,255,.12);font:700 8px Oxanium,sans-serif;letter-spacing:1px;pointer-events:none;opacity:0;transition:opacity .22s}.sp-run-chase.show{opacity:.9}.sp-run-chase.crown{color:#ffe19b;box-shadow:0 0 18px rgba(255,217,125,.16)}
+body.sp-crown-holder #profile .profile-card,body.sp-crown-holder #profile-card{border-color:rgba(255,221,135,.48)!important;box-shadow:0 0 0 1px rgba(255,221,135,.12),0 0 30px rgba(255,204,100,.11)!important}
+body.sp-crown-holder #profile:before{content:"CROWN HOLDER · KEEPER OF TODAY'S LIGHT";display:block;margin:8px auto 5px;width:max-content;max-width:90%;padding:5px 10px;border-radius:999px;border:1px solid rgba(255,221,135,.32);font:800 7px Oxanium,sans-serif;letter-spacing:1.3px;color:#ffe29b;background:rgba(255,214,120,.06)}
+body.sp-crown-holder #profile .avatar,body.sp-crown-holder #profile .profile-avatar{filter:drop-shadow(0 0 13px rgba(255,221,135,.32))}
+body.sp-crown-holder #profile .avatar:after,body.sp-crown-holder #profile .profile-avatar:after{content:"◇";position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-size:17px;color:#ffe29b;text-shadow:0 0 12px rgba(255,221,135,.55)}
+.sp-crown-streak{color:#ffe29b}
 @media(prefers-reduced-motion:reduce){.sp-crown{animation:none}}
 </style>
 """
@@ -49,7 +54,7 @@ runtime = r"""
    put("sp-winner-name",one?String(one.display_name||one.username||"PLAYER").replace(/[^A-Za-z0-9_ .-]/g,"").slice(0,24):"THE CROWN AWAITS");put("sp-winner-score",one?Number(one.score||0).toLocaleString():"—");
    const ch=document.getElementById("sp-chase");if(ch)ch.textContent=!one?"Set the first verified score and take the Crown":Number(show.my_position)===1?"YOU HOLD TODAY'S PRISM CROWN":Math.max(1,Number(show.to_crown||1)).toLocaleString()+" TO TAKE THE CROWN";
   }
-  if(legacy){put("sp-crowns",Number(legacy.crowns||0));put("sp-podiums",Number(legacy.podiums||0));put("sp-best",legacy.best_finish?"#"+legacy.best_finish:"—");put("sp-high",Number(legacy.highest_verified||0).toLocaleString())}
+  if(legacy){put("sp-crowns",Number(legacy.crowns||0));put("sp-podiums",Number(legacy.podiums||0));put("sp-best",legacy.best_finish?"#"+legacy.best_finish:"—");put("sp-high",Number(legacy.highest_verified||0).toLocaleString());document.body.classList.toggle("sp-crown-holder",Number(legacy.active_position||0)===1);if(Number(legacy.crown_streak||0)>1){const ch=document.getElementById("sp-chase");if(ch&&Number(legacy.active_position||0)===1)ch.innerHTML="CROWN HOLDER · <span class='sp-crown-streak'>"+Number(legacy.crown_streak)+" DAY STREAK</span>"}}
   st.loaded=true;
  }
  function cue(){if(!st.loaded||typeof playing==="undefined"||!playing||typeof mode==="undefined"||mode!=="classic")return;const score=Number(points||0);let q="";
