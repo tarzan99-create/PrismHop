@@ -23,7 +23,7 @@ css = """
 """
 s=s.replace('</head>',css+'</head>',1)
 
-target='<div class="daily-race-card">'
+target='<div id="daily-race-board"'
 if target not in s: raise SystemExit('race-card missing')
 card="""<div id="spotlight-prestige-card" aria-live="polite">
 <div class="sp-kicker">TODAY'S SPOTLIGHT</div><div class="sp-crown" aria-hidden="true"></div>
@@ -32,7 +32,7 @@ card="""<div id="spotlight-prestige-card" aria-live="polite">
 <div class="sp-podium"><div class="sp-place"><b>PRISM CROWN</b><small>#1 · Crown Holder</small></div><div class="sp-place"><b>LUMINOUS CREST</b><small>#2 · Radiant status</small></div><div class="sp-place"><b>FRACTURE CREST</b><small>#3 · Podium status</small></div></div>
 <div class="sp-legacy"><div class="sp-stat"><b id="sp-crowns">0</b><small>CROWNS</small></div><div class="sp-stat"><b id="sp-podiums">0</b><small>PODIUMS</small></div><div class="sp-stat"><b id="sp-best">—</b><small>BEST</small></div><div class="sp-stat"><b id="sp-high">0</b><small>VERIFIED HIGH</small></div></div>
 </div>"""
-s=s.replace(target,target+card,1)
+s=s.replace(target,card+target,1)
 
 if '<div id="sp-run-chase"' not in s:
     s=s.replace('<canvas id="game"></canvas>','<canvas id="game"></canvas><div id="sp-run-chase" class="sp-run-chase"></div>',1)
