@@ -27,14 +27,7 @@ jobs:
           cp .github/v3134/fix_frame.py /tmp/prism-v3134-frame.py
           cat .github/v3133/chunk_00 .github/v3133/chunk_01 .github/v3133/chunk_02 .github/v3133/chunk_03 | base64 --decode | gzip -d > /tmp/prism-v3133.py
           cat .github/v3134/chunk_00 .github/v3134/chunk_01 | base64 --decode | gzip -d > /tmp/prism-v3134.py
-          cat .github/v3135/chunk_00 .github/v3135/chunk_01 .github/v3135/chunk_02 > /tmp/prism-v3135.b64
-          python3 - <<'PY'
-          from pathlib import Path
-          import base64,gzip
-          s=Path('/tmp/prism-v3135.b64').read_text()
-          raw=base64.b64decode(s,validate=False)
-          Path('/tmp/prism-v3135.py').write_bytes(gzip.decompress(raw))
-          PY
+          git show 1670f5cd12632296bbbee3519cbcb46a5224d4a1:.github/v3135/patch.py.gz.b64 | base64 --decode | gzip -d > /tmp/prism-v3135.py
           python3 - <<'PY'
           from pathlib import Path
           for name, old in [
