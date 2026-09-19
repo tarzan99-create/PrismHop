@@ -27,14 +27,12 @@ jobs:
           cp .github/v3134/fix_frame.py /tmp/prism-v3134-frame.py
           cat .github/v3133/chunk_00 .github/v3133/chunk_01 .github/v3133/chunk_02 .github/v3133/chunk_03 | base64 --decode | gzip -d > /tmp/prism-v3133.py
           cat .github/v3134/chunk_00 .github/v3134/chunk_01 | base64 --decode | gzip -d > /tmp/prism-v3134.py
+          cat .github/v3135/chunk_00 .github/v3135/chunk_01 .github/v3135/chunk_02 > /tmp/prism-v3135.b64
           python3 - <<'PY'
           from pathlib import Path
           import base64,gzip
-          parts=[]
-          for n in range(3):
-              s=Path(f'.github/v3135/chunk_{n:02d}').read_text()
-              parts.append(''.join(ch for ch in s if ch.isalnum() or ch in '+/='))
-          raw=base64.b64decode(''.join(parts),validate=False)
+          s=Path('/tmp/prism-v3135.b64').read_text()
+          raw=base64.b64decode(s,validate=False)
           Path('/tmp/prism-v3135.py').write_bytes(gzip.decompress(raw))
           PY
           python3 - <<'PY'
