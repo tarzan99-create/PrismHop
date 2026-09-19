@@ -1,0 +1,255 @@
+name: Prism Hop Android V3.13.7 Exact 2D Home Prestige
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/v3133/**'
+      - '.github/v3134/**'
+      - '.github/v3135/**'
+      - '.github/v3136/**'
+      - '.github/v3137/**'
+      - '.github/workflows/android-core-v3137.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Fetch V3.13.6 assets
+        uses: actions/checkout@v4
+
+      - name: Preserve release patches
+        run: |
+          cp .github/v3132/patch.py /tmp/prism-v3132.py
+          cp .github/v3134/fix_frame.py /tmp/prism-v3134-frame.py
+          cat .github/v3133/chunk_00 .github/v3133/chunk_01 .github/v3133/chunk_02 .github/v3133/chunk_03 | base64 --decode | gzip -d > /tmp/prism-v3133.py
+          cat .github/v3134/chunk_00 .github/v3134/chunk_01 | base64 --decode | gzip -d > /tmp/prism-v3134.py
+          cat .github/v3135/patch.py.gz.b64 | base64 --decode | gzip -d > /tmp/prism-v3135.py
+          cat .github/v3136/patch.py.gz.b64 | base64 --decode | gzip -d > /tmp/prism-v3136.py
+          cp .github/v3137/patch.py /tmp/prism-v3137.py
+          python3 - <<'PY'
+          from pathlib import Path
+          for name, old in [
+              ('/tmp/prism-v3133.py',"root=Path('/mnt/data/prism3133work/android')"),
+              ('/tmp/prism-v3134.py',"root=Path('/mnt/data/prism3134/android')"),
+              ('/tmp/prism-v3136.py',"root=Path('/mnt/data/prism3135/android')"),
+          ]:
+              p=Path(name)
+              p.write_text(p.read_text().replace(old,"root=Path('android')"))
+          PY
+
+      - name: Restore verified pre-Story baseline
+        uses: actions/checkout@v4
+        with:
+          ref: 9960d0bc021ca90c1c970d6e082fb584cef09864
+          clean: true
+
+      - name: Expand Prism Hop V3.6 baseline
+        run: |
+          unzip -q Prism-Hop-V3.6-Android-Source.zip -d build-src
+          cp -R build-src/Prism-Hop-V3.6-Android/android ./android
+          printf '\nandroid.useAndroidX=true\n' >> android/gradle.properties
+
+      - name: Apply V3.6.1 native and UI polish
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64,gzip
+          p=Path('android/app/src/main/assets/index.html.gz.b64')
+          p.with_name('index.html').write_bytes(gzip.decompress(base64.b64decode(p.read_text().strip())))
+          PY
+          for p in .github/v361/index-1.patch .github/v361/index-2.patch .github/v361/index-3.patch .github/v361/index-4.patch; do
+            patch --batch android/app/src/main/assets/index.html < "$p"
+          done
+          patch --batch android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java < .github/v361/mainactivity.patch
+          patch --batch android/app/build.gradle < .github/v361/gradle.patch
+
+      - name: Apply V3.6.2 competitive session version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('android/app/src/main/assets/index.html')
+          s=p.read_text().replace('Prism Hop V3.6.1','Prism Hop V3.6.2').replace('3.6.1-android','3.6.2-android')
+          p.write_text(s)
+          p=Path('android/app/build.gradle')
+          g=p.read_text().replace('versionCode 37','versionCode 38',1).replace("versionName '3.6.1-test'","versionName '3.6.2-test'",1)
+          p.write_text(g)
+          p=Path('android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java')
+          a=p.read_text().replace('private static final String APP_VERSION = "3.6.1-test";','private static final String APP_VERSION = "3.6.2-test";',1)
+          p.write_text(a)
+          PY
+
+      - name: Apply V3.7.0 Play Integrity and polish
+        run: |
+          patch --batch android/app/src/main/assets/index.html < .github/v370/index.patch
+          patch --batch android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java < .github/v370/mainactivity.patch
+          patch --batch android/app/build.gradle < .github/v370/gradle.patch
+
+      - name: Apply V3.8.0 Daily Spotlight
+        run: python3 .github/v380/patch.py
+
+      - name: Apply V3.9.0 The Shattering launch cinematic
+        run: python3 .github/v390/patch.py
+
+      - name: Apply V3.9.1 cinematic composition
+        run: python3 .github/v391/patch.py
+
+      - name: Apply V3.9.2 patient cinematic and Back fix
+        run: |
+          python3 .github/v392/patch.py
+          python3 .github/v392/fix_pause.py
+
+      - name: Apply V3.13.2 release cleanup baseline
+        run: python3 /tmp/prism-v3132.py
+
+      - name: Apply V3.13.3 Prism Identity pass
+        run: |
+          python3 /tmp/prism-v3133.py
+          grep -q 'versionCode 50' android/app/build.gradle
+          grep -q "versionName '3.13.3-test'" android/app/build.gradle
+          grep -q '3.13.3-android' android/app/src/main/assets/index.html
+          grep -q 'mix-v3133-defaults' android/app/src/main/assets/index.html
+          grep -q 'drawPrismUniverse' android/app/src/main/assets/index.html
+          grep -q 'deathMusicReact' android/app/src/main/assets/index.html
+          grep -q 'v3133-prism-identity' android/app/src/main/assets/index.html
+          grep -q 'Haptic feedback' android/app/src/main/assets/index.html
+          grep -q 'VibrationEffect.EFFECT_TICK' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          test -s android/app/src/main/assets/licenses/FONT-LICENSES.txt
+          ! grep -q 'DAILY RACE <i>DEMO' android/app/src/main/assets/index.html
+          ! grep -q 'Touch vibration' android/app/src/main/assets/index.html
+          ! grep -q 'Replay The Shattering' android/app/src/main/assets/index.html
+          ! grep -q '>Prism typography<' android/app/src/main/assets/index.html
+          ! grep -qi 'story mode' android/app/src/main/assets/index.html
+          ! grep -q 'THE OBSIDIAN DRIFT' android/app/src/main/assets/index.html
+          ! grep -q 'FIRST SPARK' android/app/src/main/assets/index.html
+
+      - name: Apply V3.13.4 safety, performance and Flow pass
+        run: |
+          python3 /tmp/prism-v3134.py
+          python3 /tmp/prism-v3134-frame.py
+          grep -q 'versionCode 51' android/app/build.gradle
+          grep -q "versionName '3.13.4-test'" android/app/build.gradle
+          grep -q '3.13.4-android' android/app/src/main/assets/index.html
+          grep -q 'Photosensitivity notice' android/app/src/main/assets/index.html
+          grep -q 'Reduced effects' android/app/src/main/assets/index.html
+          grep -q 'flowDurationFor' android/app/src/main/assets/index.html
+          grep -q 'FRAME_MS=1000/60' android/app/src/main/assets/index.html
+          grep -q 'VERIFIED SPOTLIGHT' android/app/src/main/assets/index.html
+          grep -q 'handoffAt=reduce?650:5800' android/app/src/main/assets/index.html
+          grep -q 'preferredRefreshRate = 60.0f' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          grep -q 'PowerManager' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+          grep -q 'private static final String APP_VERSION = "3.13.4-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+
+      - name: Apply V3.13.5 Spotlight prestige pass
+        run: |
+          python3 /tmp/prism-v3135.py
+          grep -q 'versionCode 52' android/app/build.gradle
+          grep -q "versionName '3.13.5-test'" android/app/build.gradle
+          grep -q '3.13.5-android' android/app/src/main/assets/index.html
+          grep -q 'KEEPER OF TODAY' android/app/src/main/assets/index.html
+          grep -q 'PRISM CROWN' android/app/src/main/assets/index.html
+          grep -q 'Spotlight Legacy' android/app/src/main/assets/index.html
+          grep -q 'CROWN TAKEN' android/app/src/main/assets/index.html
+
+      - name: Apply V3.13.6 2D home prestige art pass
+        run: |
+          python3 /tmp/prism-v3136.py
+          grep -q 'versionCode 53' android/app/build.gradle
+          grep -q "versionName '3.13.6-test'" android/app/build.gradle
+          grep -q '3.13.6-android' android/app/src/main/assets/index.html
+          grep -q 'v3136-home-prestige-art' android/app/src/main/assets/index.html
+          grep -q 'p3136-prestige-home' android/app/src/main/assets/index.html
+          grep -q 'p3136-crown-art' android/app/src/main/assets/index.html
+          grep -q 'p3136-holder-name' android/app/src/main/assets/index.html
+          grep -q 'p3136-second' android/app/src/main/assets/index.html
+          grep -q 'p3136-third' android/app/src/main/assets/index.html
+          grep -q 'v3136-home-prestige-runtime' android/app/src/main/assets/index.html
+          grep -q 'p3135-run-chase' android/app/src/main/assets/index.html
+          grep -q 'p3135-result-prestige' android/app/src/main/assets/index.html
+          grep -q 'FRAME_MS=1000/60' android/app/src/main/assets/index.html
+          grep -q 'Reduced effects' android/app/src/main/assets/index.html
+          grep -q 'private static final String APP_VERSION = "3.13.6-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+
+      - name: Apply V3.13.7 exact 2D home prestige pass
+        run: |
+          python3 /tmp/prism-v3137.py
+          grep -q 'versionCode 54' android/app/build.gradle
+          grep -q "versionName '3.13.7-test'" android/app/build.gradle
+          grep -q '3.13.7-android' android/app/src/main/assets/index.html
+          grep -q 'v3137-exact-home-prestige' android/app/src/main/assets/index.html
+          grep -q 'p3137-second-score' android/app/src/main/assets/index.html
+          grep -q 'p3137-third-score' android/app/src/main/assets/index.html
+          grep -q 'home.classList.remove(' android/app/src/main/assets/index.html
+          grep -q 'FRAME_MS=1000/60' android/app/src/main/assets/index.html
+          grep -q 'Reduced effects' android/app/src/main/assets/index.html
+          grep -q 'private static final String APP_VERSION = "3.13.7-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
+
+      - name: Validate embedded JavaScript
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path('android/app/src/main/assets/index.html').read_text()
+          scripts=re.findall(r'<script(?:\s[^>]*)?>(.*?)</script>',s,re.S|re.I)
+          Path('/tmp/prism-inline.js').write_text('\n;\n'.join(scripts))
+          print('inline script blocks:',len(scripts))
+          PY
+          node --check /tmp/prism-inline.js
+
+      - name: Package V3.13.7 source
+        run: zip -qr Prism-Hop-V3.13.7-Core-Android-Source.zip android -x 'android/.gradle/*' 'android/app/build/*'
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Restore Prism Hop upload keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.PRISM_HOP_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/prism-hop-upload.jks"
+          test -s "$RUNNER_TEMP/prism-hop-upload.jks"
+
+      - name: Build V3.13.7 Core
+        run: gradle -p android :app:assembleDebug :app:bundleRelease --stacktrace
+
+      - name: Sign V3.13.7 release AAB
+        env:
+          STORE_PASS: ${{ secrets.PRISM_HOP_KEYSTORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.PRISM_HOP_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.PRISM_HOP_KEY_ALIAS }}
+        run: |
+          test -n "$STORE_PASS" && test -n "$KEY_PASS" && test -n "$KEY_ALIAS"
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256             -keystore "$RUNNER_TEMP/prism-hop-upload.jks"             -storepass "$STORE_PASS" -keypass "$KEY_PASS"             android/app/build/outputs/bundle/release/app-release.aab "$KEY_ALIAS"
+          jarsigner -verify -verbose -certs android/app/build/outputs/bundle/release/app-release.aab
+          cp android/app/build/outputs/bundle/release/app-release.aab Prism-Hop-V3.13.7-Core-Play-Signed.aab
+          cp android/app/build/outputs/apk/debug/app-debug.apk Prism-Hop-V3.13.7-Core-Test.apk
+
+      - name: Inspect outputs
+        run: |
+          test -s Prism-Hop-V3.13.7-Core-Test.apk
+          test -s Prism-Hop-V3.13.7-Core-Play-Signed.aab
+          test -s Prism-Hop-V3.13.7-Core-Android-Source.zip
+          sha256sum Prism-Hop-V3.13.7-Core-Test.apk Prism-Hop-V3.13.7-Core-Play-Signed.aab Prism-Hop-V3.13.7-Core-Android-Source.zip | tee Prism-Hop-V3.13.7-Core-SHA256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Prism-Hop-V3.13.7-Exact-2D-Home-Prestige
+          path: |
+            Prism-Hop-V3.13.7-Core-Test.apk
+            Prism-Hop-V3.13.7-Core-Play-Signed.aab
+            Prism-Hop-V3.13.7-Core-Android-Source.zip
+            Prism-Hop-V3.13.7-Core-SHA256.txt
+          if-no-files-found: error
+          retention-days: 14
