@@ -25,14 +25,15 @@ jobs:
         run: |
           cp .github/v3132/patch.py /tmp/prism-v3132.py
           cp .github/v3134/fix_frame.py /tmp/prism-v3134-frame.py
-          cp .github/v3135/patch.py /tmp/prism-v3135.py
           cat .github/v3133/chunk_00 .github/v3133/chunk_01 .github/v3133/chunk_02 .github/v3133/chunk_03 | base64 --decode | gzip -d > /tmp/prism-v3133.py
           cat .github/v3134/chunk_00 .github/v3134/chunk_01 | base64 --decode | gzip -d > /tmp/prism-v3134.py
+          cat .github/v3135/chunk_00 .github/v3135/chunk_01 .github/v3135/chunk_02 | base64 --decode | gzip -d > /tmp/prism-v3135.py
           python3 - <<'PY'
           from pathlib import Path
           for name, old in [
               ('/tmp/prism-v3133.py',"root=Path('/mnt/data/prism3133work/android')"),
               ('/tmp/prism-v3134.py',"root=Path('/mnt/data/prism3134/android')"),
+              ('/tmp/prism-v3135.py',"root=Path('/mnt/data/prism3135/android')"),
           ]:
               p=Path(name)
               p.write_text(p.read_text().replace(old,"root=Path('android')"))
@@ -140,16 +141,23 @@ jobs:
           grep -q 'PowerManager' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
           grep -q 'private static final String APP_VERSION = "3.13.4-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
 
-      - name: Apply V3.13.5 Spotlight prestige
+      - name: Apply V3.13.5 Spotlight prestige pass
         run: |
           python3 /tmp/prism-v3135.py
           grep -q 'versionCode 52' android/app/build.gradle
+          grep -q "versionName '3.13.5-test'" android/app/build.gradle
           grep -q '3.13.5-android' android/app/src/main/assets/index.html
+          grep -q 'KEEPER OF TODAY' android/app/src/main/assets/index.html
           grep -q 'PRISM CROWN' android/app/src/main/assets/index.html
           grep -q 'LUMINOUS CREST' android/app/src/main/assets/index.html
           grep -q 'FRACTURE CREST' android/app/src/main/assets/index.html
-          grep -q 'spotlight_showcase' android/app/src/main/assets/index.html
+          grep -q 'Spotlight Legacy' android/app/src/main/assets/index.html
           grep -q 'CROWN TAKEN' android/app/src/main/assets/index.html
+          ! grep -qi 'instagram' android/app/src/main/assets/index.html
+          ! grep -qi 'tiktok' android/app/src/main/assets/index.html
+          ! grep -qi 'youtube' android/app/src/main/assets/index.html
+          ! grep -qi 'facebook' android/app/src/main/assets/index.html
+          grep -q 'private static final String APP_VERSION = "3.13.5-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
 
       - name: Validate embedded JavaScript
         run: |
@@ -163,7 +171,7 @@ jobs:
           PY
           node --check /tmp/prism-inline.js
 
-      - name: Package V3.13.4 source
+      - name: Package V3.13.5 source
         run: zip -qr Prism-Hop-V3.13.5-Core-Android-Source.zip android -x 'android/.gradle/*' 'android/app/build/*'
 
       - uses: actions/setup-java@v5
