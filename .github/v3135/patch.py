@@ -23,7 +23,7 @@ css = """
 """
 s=s.replace('</head>',css+'</head>',1)
 
-target='<div id="daily-race-board"'
+target='<div id="daily-race"'
 if target not in s: raise SystemExit('race-card missing')
 card="""<div id="spotlight-prestige-card" aria-live="polite">
 <div class="sp-kicker">TODAY'S SPOTLIGHT</div><div class="sp-crown" aria-hidden="true"></div>
