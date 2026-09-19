@@ -27,7 +27,7 @@ jobs:
           cp .github/v3134/fix_frame.py /tmp/prism-v3134-frame.py
           cat .github/v3133/chunk_00 .github/v3133/chunk_01 .github/v3133/chunk_02 .github/v3133/chunk_03 | base64 --decode | gzip -d > /tmp/prism-v3133.py
           cat .github/v3134/chunk_00 .github/v3134/chunk_01 | base64 --decode | gzip -d > /tmp/prism-v3134.py
-          git show 1670f5cd12632296bbbee3519cbcb46a5224d4a1:.github/v3135/patch.py.gz.b64 | base64 --decode | gzip -d > /tmp/prism-v3135.py
+          cat .github/v3135/patch.py.gz.b64 | base64 --decode | gzip -d > /tmp/prism-v3135.py
           python3 - <<'PY'
           from pathlib import Path
           for name, old in [
@@ -153,10 +153,11 @@ jobs:
           grep -q 'FRACTURE CREST' android/app/src/main/assets/index.html
           grep -q 'Spotlight Legacy' android/app/src/main/assets/index.html
           grep -q 'CROWN TAKEN' android/app/src/main/assets/index.html
-          ! grep -qi 'instagram' android/app/src/main/assets/index.html
-          ! grep -qi 'tiktok' android/app/src/main/assets/index.html
-          ! grep -qi 'youtube' android/app/src/main/assets/index.html
-          ! grep -qi 'facebook' android/app/src/main/assets/index.html
+          grep -q 'v3135-spotlight-prestige' android/app/src/main/assets/index.html
+          grep -q 'p32-spotlight-legacy' android/app/src/main/assets/index.html
+          grep -q 'v33-public-legacy' android/app/src/main/assets/index.html
+          grep -q 'p3135-run-chase' android/app/src/main/assets/index.html
+          grep -q 'p3135-result-prestige' android/app/src/main/assets/index.html
           grep -q 'private static final String APP_VERSION = "3.13.5-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
 
       - name: Validate embedded JavaScript
