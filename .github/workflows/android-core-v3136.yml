@@ -160,17 +160,17 @@ jobs:
           grep -q 'versionCode 53' android/app/build.gradle
           grep -q "versionName '3.13.6-test'" android/app/build.gradle
           grep -q '3.13.6-android' android/app/src/main/assets/index.html
-          grep -q 'KEEPER OF TODAY' android/app/src/main/assets/index.html
-          grep -q 'PRISM CROWN' android/app/src/main/assets/index.html
-          grep -q 'LUMINOUS CREST' android/app/src/main/assets/index.html
-          grep -q 'FRACTURE CREST' android/app/src/main/assets/index.html
-          grep -q 'Spotlight Legacy' android/app/src/main/assets/index.html
-          grep -q 'CROWN TAKEN' android/app/src/main/assets/index.html
-          grep -q 'v3136-spotlight-prestige' android/app/src/main/assets/index.html
-          grep -q 'p32-spotlight-legacy' android/app/src/main/assets/index.html
-          grep -q 'v33-public-legacy' android/app/src/main/assets/index.html
+          grep -q 'v3136-home-prestige-art' android/app/src/main/assets/index.html
+          grep -q 'p3136-prestige-home' android/app/src/main/assets/index.html
+          grep -q 'p3136-crown-art' android/app/src/main/assets/index.html
+          grep -q 'p3136-holder-name' android/app/src/main/assets/index.html
+          grep -q 'p3136-second' android/app/src/main/assets/index.html
+          grep -q 'p3136-third' android/app/src/main/assets/index.html
+          grep -q 'v3136-home-prestige-runtime' android/app/src/main/assets/index.html
           grep -q 'p3135-run-chase' android/app/src/main/assets/index.html
           grep -q 'p3135-result-prestige' android/app/src/main/assets/index.html
+          grep -q 'FRAME_MS=1000/60' android/app/src/main/assets/index.html
+          grep -q 'Reduced effects' android/app/src/main/assets/index.html
           grep -q 'private static final String APP_VERSION = "3.13.6-test";' android/app/src/main/java/com/zarivostudios/prismhop/MainActivity.java
 
       - name: Validate embedded JavaScript
